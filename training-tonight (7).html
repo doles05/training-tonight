@@ -1,0 +1,2563 @@
+<!DOCTYPE html>
+<html lang="en-IE">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14213D">
+<title>Training Tonight</title>
+<style>
+/* =========================================================
+   STYLES
+   Palette: navy kit, chalk-white paper, pitch green,
+   bib yellow for the main action, cone orange for numbers.
+   ========================================================= */
+:root{
+  --ink:#14213D; --ink2:#4A5870; --paper:#F1F4EC; --card:#FFFFFF; --line:#D8E0CF;
+  --pitch:#2E8B4F; --pitch2:#226B3C; --bib:#FFD23F; --cone:#FF7A1A; --sky:#1E6FD9;
+  --warn:#FFF3C4; --warnline:#E8C64A;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:17px/1.5 "Avenir Next","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+[hidden]{display:none!important}
+h1,h2,h3,h4{line-height:1.15;margin:0}
+
+/* ---------- header ---------- */
+.top{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px;display:flex;align-items:center;gap:10px}
+.brand{background:none;border:0;padding:4px 0;color:#fff;font-weight:900;font-size:18px;letter-spacing:-.02em;white-space:nowrap;
+  display:flex;align-items:center;gap:8px}
+.brand svg{width:22px;height:22px}
+.top nav{margin-left:auto;display:flex;gap:6px}
+.top nav button{background:rgba(255,255,255,.1);border:0;border-radius:999px;color:#fff;padding:7px 11px;font-size:14px;font-weight:700;white-space:nowrap}
+.top nav button[aria-current="page"]{background:var(--bib);color:var(--ink)}
+.top nav button:disabled{opacity:.35;cursor:default}
+
+main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
+
+/* ---------- setup ---------- */
+.hero{padding:6px 0 18px}
+.hero h1{font-size:34px;font-weight:900;letter-spacing:-.035em}
+.hero p{margin:8px 0 0;color:var(--ink2);max-width:34em}
+.field{padding:16px 0;border-top:1px solid var(--line)}
+.field-head{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.field-head h2{font-size:19px;font-weight:800}
+.field-head .hint{color:var(--ink2);font-size:14px}
+.field-head .chip{margin-left:auto}
+.range{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.range .to{color:var(--ink2);font-weight:700}
+.stepper{display:inline-flex;align-items:center;background:var(--card);border:2px solid var(--line);border-radius:999px;padding:3px}
+.stepper button{width:46px;height:46px;border-radius:50%;border:0;background:var(--paper);font-size:26px;font-weight:700;line-height:1;
+  display:grid;place-items:center;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.stepper button:active{background:var(--bib)}
+.stepper .num-in{width:62px;height:46px;border:0;border-radius:10px;background:transparent;text-align:center;color:var(--ink);
+  font-family:inherit;font-size:24px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;padding:0}
+.stepper .num-in:focus{background:#FFF6CF;outline:2px solid var(--bib)}
+.stepper .num-in::placeholder{font-size:15px;font-weight:700;color:var(--ink2)}
+.is-unknown .stepper{opacity:.38}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:2px solid var(--line);background:var(--card);border-radius:999px;padding:9px 15px;font-weight:700;font-size:15px;min-height:44px}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip.small{min-height:36px;padding:5px 12px;font-size:14px}
+.chips.big .chip{font-size:20px;font-weight:900;padding:10px 20px;font-variant-numeric:tabular-nums}
+.go{display:block;width:100%;margin:22px 0 6px;min-height:64px;border:0;border-radius:16px;background:var(--bib);color:var(--ink);
+  font-size:22px;font-weight:900;letter-spacing:-.01em;box-shadow:0 3px 0 #C9A21A}
+.go:active{transform:translateY(2px);box-shadow:0 1px 0 #C9A21A}
+.small-note{color:var(--ink2);font-size:14px;margin:6px 0 0}
+
+/* ---------- plan overview ---------- */
+.plan-top h1{font-size:30px;font-weight:900;letter-spacing:-.03em}
+.plan-top .sum{margin:6px 0 0;color:var(--ink2);font-size:16px}
+.notes{margin:14px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.notes li{background:var(--warn);border-left:5px solid var(--warnline);border-radius:8px;padding:9px 12px;font-size:15px}
+.strip{display:flex;height:40px;border-radius:10px;overflow:hidden;margin:18px 0 6px;background:var(--pitch2)}
+.strip span{display:grid;place-items:center;color:#fff;font-weight:900;font-size:14px;font-variant-numeric:tabular-nums;
+  border-right:2px solid var(--paper);min-width:0;overflow:hidden;white-space:nowrap}
+.strip span:last-child{border-right:0}
+.strip .a{background:#6E7F99}.strip .w{background:#C99A06}.strip .s{background:var(--pitch)}.strip .g{background:var(--ink)}
+.order{list-style:none;margin:12px 0 0;padding:0}
+.order a{display:grid;grid-template-columns:78px 34px 1fr;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);
+  color:inherit;text-decoration:none}
+.order .t{font-variant-numeric:tabular-nums;color:var(--ink2);font-weight:700;font-size:15px}
+.order .n{font-weight:900;color:var(--cone);font-size:20px;text-align:center;font-variant-numeric:tabular-nums}
+.order .what{font-weight:700}
+.order .what small{display:block;font-weight:500;color:var(--ink2);font-size:14px}
+.panel{margin-top:22px}
+.panel h2{font-size:20px;font-weight:900;margin-bottom:8px}
+.panel p{margin:0 0 8px;color:var(--ink2);font-size:15px}
+.rota{width:100%;border-collapse:separate;border-spacing:4px;font-size:14px;table-layout:fixed}
+.rota th{text-align:left;font-weight:800;vertical-align:bottom;padding:2px 4px;font-size:13px;line-height:1.25}
+.rota th small{display:block;color:var(--ink2);font-weight:600}
+.rota td{border-radius:8px;padding:8px 4px;text-align:center;font-weight:800;color:#fff}
+.rota td.time{background:none;color:var(--ink2);text-align:left;font-variant-numeric:tabular-nums;font-weight:700}
+.rota-wrap{overflow-x:auto}
+.kit{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kit div{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px}
+.kit b{display:block;font-size:30px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.kit span{font-size:14px;color:var(--ink2);font-weight:700}
+.kit small{display:block;font-size:12px;color:var(--ink2);margin-top:4px;line-height:1.3}
+
+/* ---------- drill cards ---------- */
+.drills{margin-top:28px;display:grid;gap:22px}
+.drill{background:var(--card);border-radius:20px;padding:16px 16px 18px;border-top:7px solid var(--pitch);
+  box-shadow:0 1px 0 var(--line)}
+.drill.role-a{border-top-color:#6E7F99}.drill.role-w{border-top-color:#E0AE0B}.drill.role-g{border-top-color:var(--ink)}
+.drill-head{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start}
+.num{font-size:44px;font-weight:900;line-height:.9;color:var(--cone);font-variant-numeric:tabular-nums;letter-spacing:-.04em;min-width:34px}
+.drill-head h3{font-size:23px;font-weight:900;letter-spacing:-.02em}
+.drill-head .meta{margin:4px 0 0;color:var(--ink2);font-size:15px;line-height:1.35}
+.drill-head .meta b{color:var(--ink)}
+.star{width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:var(--card);display:grid;place-items:center}
+.star svg{width:24px;height:24px;fill:none;stroke:var(--ink2);stroke-width:2}
+.star[aria-pressed="true"]{background:var(--bib);border-color:var(--bib)}
+.star[aria-pressed="true"] svg{fill:var(--ink);stroke:var(--ink)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.tags span{font-size:13px;font-weight:700;background:var(--paper);border-radius:999px;padding:3px 10px;color:var(--ink2)}
+.tags span.hit{background:#DDF3E3;color:#14532D}
+.anim{position:relative;margin:14px -4px 0;border-radius:14px;overflow:hidden;background:var(--pitch);aspect-ratio:100/64}
+.anim svg{display:block;width:100%;height:100%}
+.anim .playbtn{position:absolute;right:10px;bottom:10px;width:48px;height:48px;border-radius:50%;border:0;
+  background:rgba(20,33,61,.82);color:#fff;display:grid;place-items:center}
+.anim .playbtn svg{width:20px;height:20px;fill:#fff}
+.anim.broken::after{content:"Animation unavailable";position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-weight:700}
+.sect{margin-top:16px}
+.sect h4{font-size:15px;font-weight:900;color:var(--pitch2);margin-bottom:6px}
+.sect ol,.sect ul{margin:0;padding-left:22px}
+.sect li{margin:4px 0}
+.sect p{margin:0}
+.sect ol li::marker{font-weight:900;color:var(--cone)}
+.tweak{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.tweak div{background:var(--paper);border-radius:12px;padding:10px 12px;font-size:15px}
+.tweak b{display:block;font-size:14px;margin-bottom:2px}
+.explain{margin-top:14px;width:100%;min-height:50px;border-radius:14px;border:2px dashed var(--sky);background:#EEF4FD;color:#0F4FA8;
+  font-weight:800;font-size:16px}
+.explain[aria-expanded="true"]{border-style:solid}
+.walk{margin-top:10px;background:#EEF4FD;border-radius:14px;padding:12px 14px 12px}
+.walk h4{font-size:15px;font-weight:900;color:#0F4FA8;margin-bottom:6px}
+.walk ol{margin:0;padding-left:22px}.walk li{margin:7px 0;font-size:17px}
+.walk li::marker{font-weight:900;color:#0F4FA8}
+.walk .slow{margin:8px 0 0;font-size:13px;color:var(--ink2)}
+.bibrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.bibrow b{min-width:58px}
+.swatch{width:26px;height:26px;border-radius:7px;border:2px solid rgba(0,0,0,.15)}
+.bibadd{align-items:center}.bibadd .hint{color:var(--ink2);font-size:14px;margin-right:2px}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid rgba(0,0,0,.2)}
+.swap{margin-top:16px;width:100%;min-height:52px;border-radius:14px;border:2px solid var(--ink);background:var(--card);
+  font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;gap:8px}
+.swap svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.4}
+.swap:active{background:var(--bib)}
+.back{background:none;border:0;color:var(--sky);font-weight:800;padding:8px 0;font-size:16px}
+.empty{padding:30px 0;color:var(--ink2)}
+.empty h2{color:var(--ink);font-size:22px;margin-bottom:6px}
+.flash{animation:flash .9s ease-out}
+@keyframes flash{from{box-shadow:0 0 0 4px var(--bib)}to{box-shadow:0 1px 0 var(--line)}}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;font-size:15px;max-width:90vw;
+  opacity:0;pointer-events:none;transition:opacity .2s;z-index:30}
+#toast.show{opacity:1}
+.share-row{display:flex;gap:8px;margin-top:14px}
+.share-row .wa{flex:1;min-height:52px;border:0;border-radius:14px;background:#25D366;color:#0B3D20;font-weight:900;font-size:17px;
+  display:flex;align-items:center;justify-content:center;gap:8px}
+.share-row .wa svg{width:22px;height:22px}
+.share-row .copy{min-height:52px;padding:0 18px;border-radius:14px;border:2px solid var(--ink);background:var(--card);font-weight:800}
+.chip.squad-Reds[aria-pressed="true"]{background:#E63946;border-color:#E63946}
+.chip.squad-Greens[aria-pressed="true"]{background:#12A150;border-color:#12A150}
+#mdPaste{width:100%;border:2px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:16px;background:var(--card);resize:vertical}
+.kids{display:grid;gap:8px;margin-top:6px}
+.kid{display:grid;grid-template-columns:1fr auto;gap:6px 8px;align-items:center;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px 10px}
+.kid.unk{border-style:dashed}
+.kname{font-weight:800}
+.kdel{grid-column:2;grid-row:1;width:36px;height:36px;border-radius:50%;border:0;background:var(--paper);font-size:20px;font-weight:700}
+.seg{grid-column:1 / span 2;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.seg button{min-height:40px;border-radius:9px;border:2px solid var(--line);background:var(--paper);font-weight:800;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+.seg button[data-av="out"][aria-pressed="true"]{background:#8A94A6;border-color:#8A94A6}
+.addkid{display:flex;gap:8px;margin-top:10px}
+.addkid input{flex:1;min-height:46px;border:2px solid var(--line);border-radius:12px;padding:0 12px;font:inherit;font-size:16px}
+.md-set{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 6px}
+.md-set b{display:block;font-size:14px;margin-bottom:4px}
+.mini{display:flex;align-items:center;gap:6px}
+.mini button{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);background:var(--card);font-size:20px;font-weight:800}
+.mini span{min-width:56px;text-align:center;font-weight:900}
+.gt{width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed}
+.gt th:first-child,.gt td.nm{width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gt th{font-size:12px;text-align:center;padding:4px 2px;color:var(--ink2)}
+.gt th:first-child{text-align:left}
+.gt td{text-align:center;padding:7px 2px;border-top:1px solid var(--line);font-weight:800}
+.gt td.nm{text-align:left;font-weight:700}
+.gt td.on{color:var(--pitch2)}.gt td.gk{color:var(--cone)}.gt td.sub{color:var(--ink2);font-weight:600;font-size:13px}
+.gt td.na{color:#B8C0CC}.gt td.mins{font-variant-numeric:tabular-nums}
+@media (max-width:440px){ .brand-name{display:none} }
+@media (max-width:420px){
+  .hero h1{font-size:29px}
+  .tweak{grid-template-columns:1fr}
+  .order a{grid-template-columns:66px 28px 1fr}
+  .stepper button{width:42px;height:42px}
+  .stepper .num-in{width:52px}
+}
+@media (prefers-reduced-motion:reduce){ .flash{animation:none} }
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="brand" id="brand" aria-label="Back to setup">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 20h16z" fill="#FF7A1A"/><path d="M8.2 12.5h7.6" stroke="#fff" stroke-width="1.6"/></svg>
+    <span class="brand-name">Training Tonight</span>
+  </button>
+  <nav>
+    <button data-go="setup" aria-current="page">Setup</button>
+    <button data-go="plan" disabled>Plan</button>
+    <button data-go="match">Match</button>
+    <button data-go="favs" aria-label="Favourites">&#9733; <span id="favCount">0</span></button>
+  </nav>
+</header>
+<main>
+  <section id="view-setup"></section>
+  <section id="view-plan" hidden></section>
+  <section id="view-match" hidden></section>
+  <section id="view-favs" hidden></section>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>
+"use strict";
+/* =========================================================
+   1. ANIMATION ENGINE
+   Every drill describes its animation with a small builder:
+     A(seconds).area(x,y,w,h).cones('x,y x,y').p(colour, keys, label, name).b(keys)
+   The pitch is 100 wide x 64 high, seen from above.
+   Keys are written as text:  "0:10,20 .5:40,20"  = at the start at (10,20),
+   half-way through the loop at (40,20).  A ball key "t@name" means the ball
+   is at that player's feet, so "0@a .4@a .5@b" = a dribbles, then passes to b.
+   Add ^ to a ball key to show the ball in the air on the way there.
+   Tracks loop back to their first key at the end unless they finish at 1.
+   Colours: r red, b blue, y yellow, g green, p purple, k coach (navy).
+   ========================================================= */
+const PCOL = { r:'#E63946', b:'#1E6FD9', y:'#FFC300', g:'#12A150', p:'#8B5CF6', k:'#14213D', o:'#FF7A1A' };
+const CCOL = { o:'#FF8A1F', y:'#FFE14D', b:'#4CC9F0', r:'#FF4D6D', g:'#B7F171', w:'#FFFFFF', p:'#D7A6FF' };
+const r1 = v => Math.round(v * 10) / 10;
+const K = (t, x, y) => `${+t.toFixed(3)}:${r1(x)},${r1(y)}`;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const wrap = t => ((t % 1) + 1) % 1;
+
+/* Seeded random numbers, so the same drill always animates the same way */
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function parseKeys(s) {
+  return s.trim().split(/\s+/).map(tok => {
+    let m = tok.match(/^([\d.]+)@(\w+)(\^?)$/);
+    if (m) return { t: +m[1], who: m[2], air: !!m[3] };
+    m = tok.match(/^([\d.]+):(-?[\d.]+),(-?[\d.]+)(\^?)$/);
+    if (m) return { t: +m[1], x: +m[2], y: +m[3], air: !!m[4] };
+    throw new Error('Bad animation key "' + tok + '"');
+  });
+}
+function sampleFn(fn, n = 120) {
+  const out = [];
+  for (let i = 0; i <= n; i++) { const t = i / n, [x, y] = fn(t); out.push({ t, x, y }); }
+  return out;
+}
+
+class Anim {
+  constructor(dur = 7) { Object.assign(this, { dur, areas: [], cs: [], gs: [], zs: [], ls: [], ps: [], bs: [], ts: [], names: {} }); }
+  area(x, y, w, h) { this.areas.push([x, y, w, h]); return this; }
+  cone(x, y, c = 'o') { this.cs.push([x, y, c]); return this; }
+  cones(str, c = 'o') { str.trim().split(/\s+/).forEach(p => { const [x, y] = p.split(',').map(Number); this.cone(x, y, c); }); return this; }
+  corners(x, y, w, h, c = 'o') { return this.cone(x, y, c).cone(x + w, y, c).cone(x, y + h, c).cone(x + w, y + h, c); }
+  gate(x, y, vertical = true, w = 5, c = 'y') { return vertical ? this.cone(x, y - w / 2, c).cone(x, y + w / 2, c) : this.cone(x - w / 2, y, c).cone(x + w / 2, y, c); }
+  goal(x, y, side = 'R', w = 9) { this.gs.push([x, y, side, w]); return this; }
+  zone(x, y, w, h, col = 'rgba(255,255,255,.13)', label = '') { this.zs.push([x, y, w, h, col, label]); return this; }
+  line(x1, y1, x2, y2) { this.ls.push([x1, y1, x2, y2]); return this; }
+  /* player: colour, keys (string or function t→[x,y]), label, name */
+  p(c, keys, label = '', name) {
+    const fn = typeof keys === 'function';
+    this.ps.push({ c, l: label, k: fn ? sampleFn(keys) : parseKeys(keys), lin: fn, ph: 0 });
+    if (name) this.names[name] = this.ps.length - 1;
+    return this;
+  }
+  /* which way the last player faces when standing still (fixed = always) */
+  face(dx, dy, fixed = false) { const p = this.ps[this.ps.length - 1]; p.face = [dx, dy]; p.ff = fixed; return this; }
+  /* change the last player's colour (and label) during the loop: [[t, colour, label], ...] */
+  col(steps) { this.ps[this.ps.length - 1].cols = steps; return this; }
+  /* start the last player part-way through the loop (0–1) */
+  ph(v) { this.ps[this.ps.length - 1].ph = v; return this; }
+  b(keys, ph = 0) {
+    const fn = typeof keys === 'function';
+    this.bs.push({ k: fn ? sampleFn(keys) : parseKeys(keys), lin: fn, ph });
+    return this;
+  }
+  text(x, y, steps, size = 3.6) { this.ts.push({ x, y, steps: typeof steps === 'string' ? [[0, steps]] : steps, size }); return this; }
+
+  /* A crowd of players moving around a box (dribbling unless ball:false).
+     freeze:[[t0,t1]] everyone stops, slow:[[t0,t1]] tiny touches only */
+  crowd(o) {
+    const r = rng(o.seed || 5), [bx, by, bw, bh] = o.box, steps = o.steps || 6, fr = o.freeze || [], sl = o.slow || [];
+    const cx = v => clamp(v, bx + 3, bx + bw - 3), cy = v => clamp(v, by + 3, by + bh - 3);
+    for (let i = 0; i < o.n; i++) {
+      let times = [];
+      const bounds = fr.concat(sl).flat();
+      for (let s = 0; s <= steps; s++) { const t = s / steps; if (t === 0 || t === 1 || !bounds.some(b => Math.abs(b - t) < .05)) times.push(t); }
+      fr.concat(sl).forEach(w => times.push(w[0], w[1]));
+      times = [...new Set(times.map(t => +t.toFixed(3)))].sort((a, b) => a - b)
+        .filter(t => !fr.some(w => t > w[0] && t < w[1]));
+      let first = null, prev = null; const keys = [];
+      times.forEach(t => {
+        let pos;
+        if (t === 1) pos = first;
+        else if (prev && fr.some(w => +w[1].toFixed(3) === t)) pos = prev;
+        else if (prev && sl.some(w => t > w[0] && t <= w[1])) pos = [cx(prev[0] + (r() - .5) * 7), cy(prev[1] + (r() - .5) * 7)];
+        else if (prev) pos = [cx(prev[0] + (r() - .5) * 40), cy(prev[1] + (r() - .5) * 30)];
+        else pos = [bx + 3 + r() * (bw - 6), by + 3 + r() * (bh - 6)];
+        if (!first) first = pos;
+        prev = pos; keys.push(K(t, pos[0], pos[1]));
+      });
+      const nm = (o.name || 'c') + i, col = Array.isArray(o.c) ? o.c[i % o.c.length] : (o.c || 'r');
+      this.p(col, keys.join(' '), o.labels ? (o.labels[i] || '') : '', nm);
+      if (o.ball !== false) this.b(`0@${nm} 1@${nm}`);
+    }
+    return this;
+  }
+
+  /* A small-sided game: reds attack right in the first half of the loop,
+     blues attack left in the second. n = players a side (2–4).
+     tA = where reds finish (fractions of the area), finish 'shot' | 'dribble'.
+     joker:true adds a coach/neutral who plays for whoever has the ball. */
+  match(o) {
+    const [ax, ay, aw, ah] = o.area, n = o.n || 3, pre = o.pre || '', cA = o.cA || 'r', cB = o.cB || 'b', ph = o.ph || 0;
+    const X = f => ax + f * aw, Y = f => ay + f * ah, c01 = v => clamp(v, .05, .95);
+    const S = [[[.22,.5],[.4,.45],[.52,.38],[.64,.34]], [[.3,.18],[.44,.2],[.6,.22],[.74,.3]],
+               [[.3,.82],[.46,.8],[.64,.66],[.84,.56]], [[.12,.5],[.24,.56],[.36,.5],[.46,.46]]];
+    const tA = o.tA || [1, .5], tB = o.tB || [1 - tA[0], 1 - tA[1]], fin = o.finish || 'shot', T = [0, .14, .28, .42];
+    const scr = S.slice(0, n).map(a => a.map(p => p.slice())), L = n >= 3 ? 2 : 1;
+    if (fin === 'dribble') scr[L][3] = [tA[0] + (tA[0] > .5 ? -.05 : .05), tA[1]];
+    for (let i = 0; i < n; i++) {
+      const ka = [], kb = [], sg = i % 2 ? 1 : -1;
+      scr[i].forEach((p, j) => { ka.push(K(T[j], X(p[0]), Y(p[1]))); kb.push(K(T[j], X(c01(p[0] + .12)), Y(c01(p[1] + .08 * sg)))); });
+      scr[i].forEach((p, j) => { const m = [1 - p[0], 1 - p[1]]; kb.push(K(T[j] + .5, X(m[0]), Y(m[1]))); ka.push(K(T[j] + .5, X(c01(m[0] - .12)), Y(c01(m[1] - .08 * sg)))); });
+      this.p(cA, ka.join(' '), '', pre + 'a' + i).ph(ph);
+      this.p(cB, kb.join(' '), '', pre + 'b' + i).ph(ph);
+    }
+    let J = null;
+    if (o.joker) {
+      J = pre + 'j';
+      this.p('k', [[0,.5,.5],[.16,.5,.3],[.27,.56,.36],[.5,.5,.5],[.66,.5,.7],[.77,.44,.64]].map(([t, x, y]) => K(t, X(x), Y(y))).join(' '), '+', J).ph(ph);
+    }
+    const a0 = pre + 'a0', aL = pre + 'a' + L, b0 = pre + 'b0', bL = pre + 'b' + L;
+    const R1a = J || pre + 'a1', R1b = J || pre + 'b1';
+    const fA = K(.46, X(tA[0]), Y(tA[1])) + ' ' + K(.5, X(tA[0]), Y(tA[1]));
+    const fB = K(.96, X(tB[0]), Y(tB[1]));
+    const s = n >= 3
+      ? `0@${a0} .12@${a0} .16@${R1a} .27@${R1a} .31@${aL} .41@${aL} ${fA} .53@${b0} .62@${b0} .66@${R1b} .77@${R1b} .81@${bL} .91@${bL} ${fB}`
+      : `0@${a0} .2@${a0} .26@${aL} .41@${aL} ${fA} .53@${b0} .7@${b0} .76@${bL} .91@${bL} ${fB}`;
+    this.b(s, ph);
+    return this;
+  }
+
+  /* A 1v1 in a box: red attacks right and beats the defender, then blue
+     attacks left. finish 'line' (stop it on the line) | 'gate' | 'goal'. */
+  duel(o) {
+    const [x, y, w, h] = o.box, cy = y + h / 2, dy = h * .28 * (o.fake || 1), pre = o.pre || 'd', ph = o.ph || 0;
+    const A1 = [[0,.1,0],[.14,.38,0],[.24,.5,dy],[.33,.68,-dy*.6],[.43,.92,-dy]];
+    const D1 = [[0,.85,0],[.14,.62,0],[.24,.56,dy*.9],[.33,.6,dy*.2],[.43,.76,-dy*.3]];
+    const mir = pts => pts.map(([t, fx, fy]) => [t + .5, 1 - fx, -fy]);
+    const toK = pts => pts.map(([t, fx, fy]) => K(t, x + fx * w, cy + fy)).join(' ');
+    this.p(o.cA || 'r', toK(A1) + ' ' + toK(mir(D1)), '', pre + 'a').ph(ph);
+    this.p(o.cB || 'b', toK(D1) + ' ' + toK(mir(A1)), '', pre + 'd').ph(ph);
+    const end = s => {
+      const ex = s > 0 ? x + w : x, ey = cy - s * dy;
+      if (o.finish === 'goal') return [ex + s * 1.5, cy];
+      if (o.finish === 'gate') return [ex + s * 2.5, ey];
+      return [ex - s * .8, ey];
+    };
+    const e1 = end(1), e2 = end(-1);
+    this.b(`0@${pre}a .43@${pre}a ${K(.47, ...e1)} ${K(.5, ...e1)} .53@${pre}d .93@${pre}d ${K(.97, ...e2)}`, ph);
+    if (o.gates) this.gate(x + w, cy + dy).gate(x + w, cy - dy).gate(x, cy + dy).gate(x, cy - dy);
+    if (o.goals) this.goal(x + w, cy, 'R', 8).goal(x, cy, 'L', 8);
+    return this;
+  }
+
+  /* Check the animation and link ball keys to players */
+  done() {
+    const close = k => {
+      k.sort((a, b) => a.t - b.t);
+      if (k[0].t > 0) k.unshift({ ...k[0], t: 0, air: false });
+      if (k[k.length - 1].t < 1) k.push({ ...k[0], t: 1, air: false });
+      return k;
+    };
+    this.ps.forEach(p => { close(p.k); const a = p.k[0], z = p.k[p.k.length - 1]; p.seam = Math.hypot(a.x - z.x, a.y - z.y) > 1; });
+    this.bs.forEach(b => {
+      b.k.forEach(key => {
+        if (key.who != null) {
+          const i = /^\d+$/.test(key.who) ? +key.who : this.names[key.who];
+          if (i == null || !this.ps[i]) throw new Error('Ball refers to unknown player "' + key.who + '"');
+          key.pi = i;
+        }
+      });
+      close(b.k);
+    });
+    return this;
+  }
+}
+const A = dur => new Anim(dur);
+
+/* --- position maths --- */
+function seg(k, t) { let i = 0; while (i < k.length - 2 && t >= k[i + 1].t) i++; return i; }
+function pPos(p, t) { return posLocal(p, wrap(t + p.ph)); }
+function posLocal(p, t) {
+  const k = p.k, i = seg(k, t), a = k[i], b = k[i + 1], span = b.t - a.t;
+  let u = span > 0 ? clamp((t - a.t) / span, 0, 1) : 1;
+  if (!p.lin) u = u * u * (3 - 2 * u);
+  return [a.x + (b.x - a.x) * u, a.y + (b.y - a.y) * u];
+}
+/* where the ball sits at a player's feet: in front of the way they are moving */
+function feet(an, pi, t) {
+  const p = an.ps[pi], tl = wrap(t + p.ph), [x, y] = posLocal(p, tl);
+  /* players whose loop ends somewhere else (seam) must not look across the seam */
+  const at = dt => posLocal(p, p.seam ? clamp(tl + dt, 0, .99999) : wrap(tl + dt));
+  let f = p.face || [1, 0], m = 1;
+  if (!p.ff) {
+    const a = at(-.03), c = at(.03);
+    const bx = x - a[0], by = y - a[1], fx = c[0] - x, fy = c[1] - y, Lb = Math.hypot(bx, by), Lf = Math.hypot(fx, fy);
+    if (Lb + Lf > .6) {
+      /* moving: ball in front; when the player turns back, the ball rolls under them */
+      const vx = bx + fx, vy = by + fy, L = Math.hypot(vx, vy);
+      m = L / (Lb + Lf);
+      if (L > 1e-6) f = [vx / L, vy / L]; else m = 0;
+    } else {
+      /* standing still: blend from the way they came in to the way they will leave,
+         so the ball turns smoothly with the player */
+      const look = sign => {
+        for (let w = .02; w <= .5; w += .02) {
+          const q = at(sign * w), dx = (x - q[0]) * -sign, dy = (y - q[1]) * -sign, L = Math.hypot(dx, dy);
+          if (L > .3) return { w, d: [dx / L, dy / L] };
+        }
+        return null;
+      };
+      const B = look(-1), F = look(1);
+      if (B && F) {
+        const s = B.w / (B.w + F.w), vx = B.d[0] * (1 - s) + F.d[0] * s, vy = B.d[1] * (1 - s) + F.d[1] * s, L = Math.hypot(vx, vy);
+        if (L > 1e-6) { f = [vx / L, vy / L]; m = L; } else m = 0;
+      } else if (B || F) f = (B || F).d;
+    }
+  }
+  return [x + f[0] * 2.7 * m, y + f[1] * 2.7 * m];
+}
+function bPos(an, b, t) {
+  const tl = wrap(t + b.ph), k = b.k, i = seg(k, tl), a = k[i], c = k[i + 1];
+  const g = kt => wrap(kt - b.ph);
+  if (a.pi != null && a.pi === c.pi) return [...feet(an, a.pi, t), 1];
+  const span = c.t - a.t, u = span > 0 ? clamp((tl - a.t) / span, 0, 1) : 1;
+  const p0 = a.pi != null ? feet(an, a.pi, g(a.t)) : [a.x, a.y];
+  const p1 = c.pi != null ? feet(an, c.pi, g(c.t)) : [c.x, c.y];
+  const e = b.lin ? u : 1 - (1 - u) * (1 - u);
+  const s = c.air ? 1 + .9 * Math.sin(Math.PI * u) : 1;
+  return [p0[0] + (p1[0] - p0[0]) * e, p0[1] + (p1[1] - p0[1]) * e, s];
+}
+
+/* --- drawing --- */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function sv(tag, attrs, parent) {
+  const e = document.createElementNS(SVGNS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function drawGoal(svg, [x, y, s, w]) {
+  const d = 2.6, h = w / 2;
+  let path, net;
+  if (s === 'R') { path = `M${x},${y - h}H${x + d}V${y + h}H${x}`; net = [x, y - h, d, w]; }
+  else if (s === 'L') { path = `M${x},${y - h}H${x - d}V${y + h}H${x}`; net = [x - d, y - h, d, w]; }
+  else if (s === 'T') { path = `M${x - h},${y}V${y - d}H${x + h}V${y}`; net = [x - h, y - d, w, d]; }
+  else { path = `M${x - h},${y}V${y + d}H${x + h}V${y}`; net = [x - h, y, w, d]; }
+  sv('rect', { x: net[0], y: net[1], width: net[2], height: net[3], fill: 'rgba(255,255,255,.22)' }, svg);
+  sv('path', { d: path, fill: 'none', stroke: '#fff', 'stroke-width': .8, 'stroke-linejoin': 'round' }, svg);
+}
+function mountAnim(svg, an) {
+  svg.setAttribute('viewBox', '0 0 100 64');
+  sv('rect', { width: 100, height: 64, fill: '#2E8B4F' }, svg);
+  for (let i = 0; i < 8; i += 2) sv('rect', { x: i * 12.5, y: 0, width: 12.5, height: 64, fill: '#34965A' }, svg);
+  an.areas.forEach(([x, y, w, h]) => sv('rect', { x, y, width: w, height: h, fill: 'none', stroke: 'rgba(255,255,255,.8)', 'stroke-width': .45 }, svg));
+  an.zs.forEach(([x, y, w, h, c, l]) => {
+    sv('rect', { x, y, width: w, height: h, fill: c }, svg);
+    if (l) sv('text', { x: x + w / 2, y: y + h / 2 + 1.1, 'text-anchor': 'middle', 'font-size': 3, 'font-weight': 800, fill: 'rgba(255,255,255,.85)' }, svg).textContent = l;
+  });
+  an.ls.forEach(([x1, y1, x2, y2]) => sv('line', { x1, y1, x2, y2, stroke: 'rgba(255,255,255,.7)', 'stroke-width': .4, 'stroke-dasharray': '1.4 1.1' }, svg));
+  an.gs.forEach(g => drawGoal(svg, g));
+  an.cs.forEach(([x, y, c]) => sv('path', { d: `M${x - 1.3},${y + 1} L${x},${y - 1.6} L${x + 1.3},${y + 1} Z`, fill: CCOL[c] || c, stroke: 'rgba(0,0,0,.4)', 'stroke-width': .25 }, svg));
+  const pls = an.ps.map(p => {
+    const g = sv('g', {}, svg);
+    const c = sv('circle', { r: 2.3, fill: PCOL[p.c] || p.c, stroke: '#fff', 'stroke-width': .55 }, g);
+    let tx = null;
+    if (p.l || p.cols) { tx = sv('text', { y: 1, 'text-anchor': 'middle', 'font-size': 2.6, 'font-weight': 900, fill: p.c === 'y' ? '#14213D' : '#fff' }, g); tx.textContent = p.l; }
+    g._c = c; g._t = tx;
+    return g;
+  });
+  const bls = an.bs.map(() => {
+    const g = sv('g', {}, svg);
+    sv('circle', { r: 1.2, fill: '#fff', stroke: '#14213D', 'stroke-width': .35 }, g);
+    sv('circle', { r: .42, fill: '#14213D' }, g);
+    return g;
+  });
+  const txs = an.ts.map(tt => sv('text', { x: tt.x, y: tt.y, 'text-anchor': 'middle', 'font-size': tt.size, 'font-weight': 900,
+    stroke: 'rgba(0,0,0,.6)', 'stroke-width': .7, 'paint-order': 'stroke', fill: '#fff' }, svg));
+  function draw(t) {
+    an.ps.forEach((p, i) => {
+      const [x, y] = pPos(p, t), g = pls[i];
+      g.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+      if (p.cols) {
+        let s = p.cols[0]; for (const st of p.cols) if (st[0] <= wrap(t + p.ph)) s = st;
+        if (g._key !== s) { g._key = s; g._c.setAttribute('fill', PCOL[s[1]] || s[1]); g._t.textContent = s[2] || ''; g._t.setAttribute('fill', s[1] === 'y' ? '#14213D' : '#fff'); }
+      }
+    });
+    an.bs.forEach((b, i) => { const [x, y, s] = bPos(an, b, t); bls[i].setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${s.toFixed(2)})`); });
+    an.ts.forEach((tt, i) => {
+      let s = tt.steps[0];
+      for (const st of tt.steps) if (st[0] <= t) s = st;
+      if (txs[i].textContent !== s[1]) txs[i].textContent = s[1];
+      txs[i].setAttribute('fill', s[2] || '#fff');
+    });
+  }
+  draw(0);
+  return draw;
+}
+
+/* --- playback: one loop drives every animation that is on screen --- */
+const REDUCED = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+let LIVE = [], observer = null;
+const ICON_PLAY = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3l12 7-12 7z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h4v14H4zM12 3h4v14h-4z"/></svg>';
+function attachAnim(fig, drill) {
+  const svg = fig.querySelector('svg'), btn = fig.querySelector('.playbtn');
+  let an;
+  try { an = drill.anim().done(); } catch (e) { console.error(drill.id, e); fig.classList.add('broken'); btn.hidden = true; return; }
+  const st = { fig, an, draw: mountAnim(svg, an), t: 0, speed: 1, playing: !REDUCED, visible: false, last: 0 };
+  fig._anim = st;
+  const setBtn = () => { btn.innerHTML = st.playing ? ICON_PAUSE : ICON_PLAY; btn.setAttribute('aria-label', st.playing ? 'Pause animation' : 'Play animation'); };
+  btn.onclick = () => { st.playing = !st.playing; st.last = 0; setBtn(); };
+  setBtn();
+  LIVE.push(st);
+  if (observer) observer.observe(fig); else st.visible = true;
+}
+function resetAnims(scope) {
+  LIVE = LIVE.filter(s => { const gone = !document.body.contains(s.fig) || (scope && scope.contains(s.fig)); if (gone && observer) observer.unobserve(s.fig); return !gone; });
+}
+if (typeof IntersectionObserver === 'function') {
+  observer = new IntersectionObserver(es => es.forEach(e => { const s = LIVE.find(x => x.fig === e.target); if (s) { s.visible = e.isIntersecting; s.last = 0; } }), { rootMargin: '80px' });
+}
+function tick(now) {
+  for (const s of LIVE) {
+    if (s.playing && s.visible) {
+      const dt = s.last ? Math.min(.1, (now - s.last) / 1000) : 0;
+      s.t = (s.t + dt * s.speed / s.an.dur) % 1;
+      s.draw(s.t);
+      s.last = now;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+/* =========================================================
+   2. DATA: FOCUS AREAS AND THE DRILL CATALOGUE
+   To add a focus area, add a line to FOCUS.
+   To add a drill, copy any D({...}) block below and edit it:
+     role   'w' warm-up, 's' skill station, 'g' closing game (space-separated)
+     focus  keys from FOCUS (first one = main focus)
+     int    intensity 1 (calm) – 3 (flat out)
+     dur    [min, max] minutes the activity works for
+     min/max players per area (bigger groups get extra areas side by side)
+     ball   'each' | 'half' | 'third' | a number per area | 0
+     cones  [cones per area, extra cones per player]
+     bibs   'none' | 'few' (taggers) | 'team' (half the players); bibReq:true if it can't run without
+     setup  text can use {per} players per area, {half} half of them, {few} a few of them
+   ========================================================= */
+const FOCUS = [
+  ['dribbling', 'Dribbling'], ['ballmastery', 'Ball mastery'], ['running', 'Running with the ball'],
+  ['passing', 'Passing'], ['firsttouch', 'First touch'], ['shooting', 'Shooting'], ['turning', 'Turning'],
+  ['1v1', '1v1 attacking'], ['defending', 'Defending'], ['gk', 'Goalkeeping'], ['agility', 'Coordination & agility'],
+  ['speed', 'Speed & reactions'], ['possession', 'Keeping the ball'], ['teamwork', 'Teamwork & games'], ['bothfeet', 'Using both feet']
+];
+const FOCUS_LABEL = Object.fromEntries(FOCUS);
+const DRILLS = [];
+function D(d) {
+  DRILLS.push(Object.assign({ int: 2, bibs: 'none', bibReq: false, cones: [4, 0], ball: 'each' }, d, { role: d.role.split(' ') }));
+}
+
+/* ---------------- WARM-UPS AND GAMES OF TAG ---------------- */
+D({ id: 'traffic', name: 'Traffic Lights', role: 'w s', focus: ['dribbling', 'ballmastery', 'speed'], int: 2, dur: [5, 10], min: 4, max: 20,
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Everyone in the box with a ball.'],
+  how: 'Everyone dribbles anywhere in the box. Coach shouts a colour: green = dribble fast, amber = slow little touches, red = stop the ball with your sole.',
+  pts: ['Little touches, ball close to your feet', 'Heads up, find a space', 'Sole on top of the ball to stop'],
+  easy: 'Only use green and red.', hard: 'Add purple = turn around, blue = weaker foot only.',
+  anim: () => A(8).area(20, 7, 60, 52).corners(20, 7, 60, 52)
+    .crowd({ n: 8, box: [20, 7, 60, 52], c: 'r', seed: 11, steps: 8, slow: [[.38, .6]], freeze: [[.62, .84]] })
+    .text(50, 5.2, [[0, 'GREEN: go fast', '#8CFF7A'], [.38, 'AMBER: little touches', '#FFC300'], [.6, 'RED: sole on the ball', '#FF6B6B'], [.86, 'GREEN: go fast', '#8CFF7A']])
+});
+
+D({ id: 'sharks', name: 'Sharks and Minnows', role: 'w s', focus: ['dribbling', '1v1', 'defending'], int: 3, dur: [6, 12], min: 6, max: 16, bibs: 'few',
+  setup: ['Mark a box about 25 × 20 big steps with 4 cones.', 'Minnows line up on one end line, each with a ball.', 'Sharks ({few}) wear bibs, have no ball and start in the middle.'],
+  how: 'On "Go!" the minnows dribble to the other end without a shark kicking their ball out. Lose your ball? Fetch it, do 5 toe taps outside the box, and join back in. New sharks every 2 crossings.',
+  pts: ['Keep the ball close when a shark is near', 'Change speed and direction to escape', 'Sharks: get close, stay on your toes, poke it away'],
+  easy: 'One shark, or sharks must walk.', hard: 'Minnows must get across in 10 seconds; add another shark.',
+  anim: () => A(9).area(10, 8, 80, 48).corners(10, 8, 80, 48)
+    .zone(10, 8, 6, 48).zone(84, 8, 6, 48)
+    .p('r', '0:13,14 .06:13,14 .26:50,20 .45:86,16 .55:86,16 .75:50,12 .95:13,14', '', 'm1')
+    .p('r', '0:13,24 .06:13,24 .26:48,30 .45:86,26 .55:86,26 .75:52,30 .95:13,24', '', 'm2')
+    .p('r', '0:13,34 .06:13,34 .27:45,36 .35:53,55 .44:56,58 .52:56,58 .62:86,38 .76:50,42 .95:13,34', '', 'm3')
+    .p('r', '0:13,44 .06:13,44 .26:52,46 .45:86,46 .55:86,46 .75:48,50 .95:13,44', '', 'm4')
+    .p('r', '0:13,52 .06:13,52 .26:46,53 .45:86,53 .55:86,53 .76:54,52 .95:13,52', '', 'm5')
+    .p('y', '0:50,26 .2:47,33 .27:48,37 .4:52,30 .6:52,34 .72:50,20 .85:50,24', 'S', 's1')
+    .p('y', '0:52,42 .22:54,48 .4:50,44 .6:46,44 .75:52,48', 'S', 's2')
+    .b('0@m1 1@m1').b('0@m2 1@m2').b('0@m3 .27@m3 .34:56,60.5 .44:56,60.5 .45@m3 1@m3').b('0@m4 1@m4').b('0@m5 1@m5')
+    .text(50, 5.5, [[0, 'Go! Dribble across'], [.29, 'Ball out: fetch it, 5 toe taps', '#FFC300'], [.55, 'Go back across!']])
+});
+
+D({ id: 'simon', name: 'Simon Says Ball Mastery', role: 'w s', focus: ['ballmastery', 'bothfeet', 'agility'], int: 1, dur: [5, 9], min: 4, max: 20,
+  setup: ['Mark a box about 15 × 15 big steps with 4 cones.', 'Everyone spreads out in the box with a ball, facing the coach.'],
+  how: 'The coach calls moves: toe taps, sole rolls, pull-backs, step-overs. Only do it if the coach says "Simon says" first!',
+  pts: ['On your toes, light touches', 'Use both feet', 'Eyes up to watch the coach'],
+  easy: 'Drop the trick; everyone just copies the coach.', hard: 'Put two moves together, e.g. sole roll then pull-back.',
+  anim: () => {
+    const a = A(9).area(25, 12, 50, 40).corners(25, 12, 50, 40);
+    [[35, 22], [50, 22], [65, 22], [35, 36], [50, 36], [65, 36]].forEach(([x, y], i) => {
+      a.p('r', t => {
+        if (t < .33) return [x, y + Math.sin(t * 60) * .25];
+        if (t < .66 || (i === 4 && t < .85)) return [x + Math.sin((t - .33) * Math.PI * 8) * 3, y];
+        return [x, y];
+      }, '', 'p' + i).face(0, 1, true).b(`0@p${i} 1@p${i}`);
+    });
+    return a.p('k', '0:50,57 1:50,57', 'C').text(50, 8.5, [[0, 'Simon says toe taps!'], [.33, 'Simon says sole rolls!'], [.66, 'Stop! (no "Simon says")', '#FFC300'], [.86, 'Caught one! Do 3 toe taps', '#FFC300']]);
+  }
+});
+
+D({ id: 'bodyparts', name: 'Body Part Freeze', role: 'w', focus: ['dribbling', 'speed', 'agility'], int: 2, dur: [5, 8], min: 4, max: 20,
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Everyone in the box with a ball.'],
+  how: 'Everyone dribbles. Coach shouts a body part: "Knee!", "Elbow!", "Bum!". Stop the ball fast and touch it with that part, then dribble off again.',
+  pts: ['Stop the ball with your sole first', 'Quick to stop, quick to go', 'Look for a new space every time'],
+  easy: 'Only use "Hand!" and "Knee!".', hard: 'Last one to stop does 5 toe taps; call two body parts at once.',
+  anim: () => A(8).area(20, 8, 60, 50).corners(20, 8, 60, 50)
+    .crowd({ n: 8, box: [20, 8, 60, 50], c: ['r', 'b'], seed: 23, steps: 7, freeze: [[.28, .42], [.68, .82]] })
+    .text(50, 5.6, [[0, 'Dribble!'], [.28, '"Knee on the ball!"', '#FFC300'], [.42, 'Dribble!'], [.68, '"Elbow on the ball!"', '#FFC300'], [.82, 'Dribble!']])
+});
+
+D({ id: 'gates', name: 'Gate Dribble Challenge', role: 'w s', focus: ['dribbling', 'running', 'turning'], int: 2, dur: [5, 10], min: 4, max: 16, cones: [4, 1],
+  setup: ['Mark a box about 25 × 20 big steps with 4 cones.', 'Inside, set out {half} little gates (2 cones, 2 steps apart): one gate for every two players.', 'Everyone has a ball.'],
+  how: 'Dribble through as many gates as you can in 45 seconds, counting out loud. You can\'t use the same gate twice in a row. Beat your score next go.',
+  pts: ['Look up to find a free gate', 'Small touches near the gate, push into space after', 'Use both feet'],
+  easy: 'Make the gates wider.', hard: 'Weaker foot only, or you must turn and come back through each gate.',
+  anim: () => A(8).area(15, 6, 70, 52).corners(15, 6, 70, 52)
+    .gate(30, 18).gate(55, 14).gate(70, 30).gate(50, 34).gate(30, 44).gate(62, 48)
+    .p('r', '0:22,18 .14:38,18 .28:46,34 .4:56,34 .55:66,30 .68:76,30 .85:60,22', '', 'a')
+    .p('b', '0:48,14 .14:62,14 .3:58,26 .42:56,34 .52:44,34 .7:36,44 .82:24,44', '', 'b')
+    .p('y', '0:24,44 .14:36,44 .3:54,50 .42:56,48 .55:68,48 .7:76,30 .85:62,30', '', 'c')
+    .b('0@a 1@a').b('0@b 1@b').b('0@c 1@c')
+    .text(50, 4.5, 'How many gates in 45 seconds?', 3.2)
+});
+
+D({ id: 'robnest', name: 'Rob the Nest', role: 'w s', focus: ['dribbling', 'speed', 'teamwork'], int: 3, dur: [6, 10], min: 8, max: 20, cones: [12, 0],
+  setup: ['Mark a box about 25 × 25 big steps. Each corner is a team\'s nest (2 cones).', 'Put every ball in a pile in the middle (4 cones around it).', 'Split into 4 teams, one per corner.'],
+  how: 'On "Go!" one player from each team runs in, dribbles one ball back to the nest, and the next goes. When the middle is empty, rob from other nests! Most balls after 60 seconds wins.',
+  pts: ['Run fast, dribble back with small touches', 'Stop the ball in your nest with your sole', 'Next player goes as soon as the ball is in'],
+  easy: 'No robbing nests; just empty the middle.', hard: 'Two from each team go at once; one ball each trip.',
+  anim: () => A(8).area(10, 8, 80, 52).cones('13,11 23,11 77,11 87,11 13,57 23,57 77,57 87,57').cones('45,28 55,28 45,38 55,38', 'w')
+    .p('r', '0:20,15 .25:47,31 .55:20,15 1:20,15', '', 'r').p('r', '0:14,17 1:14,17')
+    .p('b', '0:80,15 .25:53,31 .55:80,15 .65:80,15 .8:24,15 .95:80,15 1:80,15', '', 'b').p('b', '0:86,17 1:86,17')
+    .p('y', '0:20,52 .25:47,35 .55:20,52 1:20,52', '', 'y').p('y', '0:14,50 1:14,50')
+    .p('g', '0:80,52 .25:53,35 .55:80,52 1:80,52', '', 'g').p('g', '0:86,50 1:86,50')
+    .b('0:47,31 .25:47,31 .27@r .55@r .58:19,12 .79:19,12 .81@b .95@b .97:82,10 1:82,10')
+    .b('0:53,31 .25:53,31 .27@b .55@b .58:82,13 1:82,13')
+    .b('0:47,35 .25:47,35 .27@y .55@y .58:19,55 1:19,55')
+    .b('0:53,35 .25:53,35 .27@g .55@g .58:82,55 1:82,55')
+    .b('0:50,33 1:50,33')
+    .text(50, 5.5, [[0, 'Go! One ball per trip'], [.62, 'Middle empty? Rob a nest!', '#FFC300']])
+});
+
+D({ id: 'stuckmud', name: 'Stuck in the Mud', role: 'w', focus: ['dribbling', 'teamwork', 'speed'], int: 3, dur: [5, 9], min: 6, max: 18, bibs: 'few',
+  setup: ['Mark a box about 25 × 20 big steps with 4 cones.', 'Everyone has a ball except the taggers ({few}), who wear bibs.'],
+  how: 'Taggers try to touch dribblers on the shoulder. Tagged players freeze with legs wide. A teammate frees them by passing their own ball through the frozen player\'s legs.',
+  pts: ['Dribble away from taggers, into space', 'Look around for frozen teammates to save', 'Gentle pass through the legs, then collect it'],
+  easy: 'Freed with a high five instead of a pass.', hard: 'Taggers dribble a ball too; must tag while keeping it.',
+  anim: () => A(8).area(15, 6, 70, 52).corners(15, 6, 70, 52)
+    .crowd({ n: 4, box: [15, 6, 70, 52], c: 'r', seed: 31, steps: 6 })
+    .p('r', '0:30,18 .2:44,25 .3:50,30 .62:50,30 .75:60,40 .9:40,30', '', 'f')
+    .p('y', '0:22,12 .2:39,21 .3:46,27 .45:66,18 .7:72,46 .9:34,42', 'T', 't')
+    .p('r', '0:72,46 .3:62,38 .44:56,31 .49:52,34 .53:47,31 .7:35,42 .9:62,48', '', 'h')
+    .b('0@f 1@f').b('0@h .44@h .49:45.5,30 .53@h 1@h')
+    .text(50, 4.4, [[0, 'Tagger chases…'], [.3, 'Tagged! Freeze, legs wide', '#FFC300'], [.47, 'Pass through the legs = free!', '#8CFF7A'], [.66, 'Keep dribbling']], 3.4)
+});
+
+D({ id: 'colourcones', name: 'Colour Cones', role: 'w s', focus: ['dribbling', 'speed', 'turning'], int: 2, dur: [5, 9], min: 4, max: 16, cones: [16, 0],
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Scatter 12 cones inside: 4 each of three colours.', 'Everyone has a ball.'],
+  how: 'Everyone dribbles. Coach calls a colour: dribble to a cone of that colour and touch it with the sole of your foot, then off you go again.',
+  pts: ['Heads up to spot the right colour', 'Slow down near the cone, sole on top', 'Turn and burst away into space'],
+  easy: 'Two colours only.', hard: 'Call two colours: touch one of each, or touch with the weaker foot.',
+  anim: () => A(8).area(15, 6, 70, 52).corners(15, 6, 70, 52)
+    .cones('30,20 70,18 40,45 65,44', 'b').cones('50,30 25,40 78,32 52,52', 'y').cones('38,12 60,36 22,28 80,50', 'r')
+    .p('r', '0:45,25 .3:30,23.5 .45:30,23.5 .75:25,43.5 .9:25,43.5', '', 'a')
+    .p('r', '0:55,25 .3:70,21.5 .45:70,21.5 .75:78,35.5 .9:78,35.5', '', 'b')
+    .p('r', '0:45,38 .3:40,48.5 .45:40,48.5 .75:50,33.5 .9:50,33.5', '', 'c')
+    .p('r', '0:58,40 .3:65,47.5 .45:65,47.5 .75:52,55.5 .9:52,55.5', '', 'd')
+    .b('0@a 1@a').b('0@b 1@b').b('0@c 1@c').b('0@d 1@d')
+    .text(50, 4.4, [[0, 'Dribble…'], [.08, '"BLUE!"', '#4CC9F0'], [.45, 'Dribble…'], [.5, '"YELLOW!"', '#FFE14D'], [.9, 'Dribble…']])
+});
+
+D({ id: 'fourcorners', name: 'Four Corners', role: 'w', focus: ['dribbling', 'speed', 'running'], int: 2, dur: [5, 8], min: 4, max: 20,
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Number the corners 1, 2, 3, 4 (point to each one).', 'Everyone has a ball.'],
+  how: 'Everyone dribbles in the box. Coach shouts a number and everyone dribbles to that corner as fast as they can, then back into the middle.',
+  pts: ['Big touches into open space, small touches in traffic', 'Heads up so you don\'t crash', 'Stop the ball at the corner with your sole'],
+  easy: 'Point to the corner as you call it.', hard: 'Shout a sum: "1 + 2!" means corner 3.',
+  anim: () => A(8).area(15, 6, 70, 52).corners(15, 6, 70, 52)
+    .text(19, 11.5, '1', 4).text(81, 11.5, '2', 4).text(19, 56.5, '3', 4).text(81, 56.5, '4', 4)
+    .p('r', '0:40,20 .15:55,28 .3:48,24 .55:23,47 .7:23,47 .85:45,30', '', 'a')
+    .p('b', '0:60,40 .15:45,44 .3:55,36 .55:27,51 .7:27,51 .85:60,22', '', 'b')
+    .p('y', '0:30,30 .15:40,36 .3:62,20 .55:29,46 .7:29,46 .85:70,40', '', 'c')
+    .p('r', '0:70,25 .15:60,18 .3:35,40 .55:21,52 .7:21,52 .85:35,20', '', 'd')
+    .p('b', '0:50,50 .15:65,48 .3:72,40 .55:31,52 .7:31,52 .85:55,46', '', 'e')
+    .p('y', '0:35,15 .15:28,25 .3:42,48 .55:24,43 .7:24,43 .85:28,30', '', 'f')
+    .b('0@a 1@a').b('0@b 1@b').b('0@c 1@c').b('0@d 1@d').b('0@e 1@e').b('0@f 1@f')
+    .text(50, 4.4, [[0, 'Dribble anywhere'], [.3, '"Corner 3!"', '#FFC300'], [.72, 'Back into the middle']])
+});
+
+D({ id: 'dribbletag', name: 'Dribble Tag', role: 'w s', focus: ['dribbling', 'speed', 'ballmastery'], int: 3, dur: [5, 9], min: 5, max: 16, bibs: 'few',
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Everyone has a ball. One player is the tagger and wears a bib (two taggers if there are more than 10).'],
+  how: 'Everyone dribbles a ball, the tagger too. The tagger tries to touch someone on the shoulder without losing their own ball. If you\'re touched, you take the bib, count to 3, and now you\'re the tagger.',
+  pts: ['Keep the ball close so you can dodge', 'Heads up: where is the tagger?', 'Tagger: little touches, then pounce'],
+  easy: 'The tagger has no ball.', hard: 'Weaker foot only; or the tagger must touch the ball, not the player.',
+  anim: () => A(9).area(20, 6, 60, 52).corners(20, 6, 60, 52)
+    .crowd({ n: 4, box: [20, 6, 60, 52], c: 'r', seed: 47, steps: 6 })
+    .p('y', '0:26,14 .3:46,29 .35:48.5,31 .5:62,44 .7:73,37 .82:67,26 .85:66,25 1:26,14', 'T', 't').col([[0, 'y', 'T'], [.35, 'r', ''], [.83, 'y', 'T']])
+    .p('r', '0:58,22 .3:53,30 .35:52,32 .47:52,32 .6:62,40 .75:70,33 .82:69.5,27.5 .86:66,30 1:58,22', '', 'v').col([[0, 'r', ''], [.35, 'y', 'T'], [.83, 'r', '']])
+    .b('0@t 1@t').b('0@v 1@v')
+    .text(50, 4.4, [[0, 'The tagger (yellow) chases'], [.33, 'Tagged! Swap the bib', '#FFC300'], [.4, 'New tagger counts to 3'], [.5, 'Now they chase'], [.81, 'Tagged! Swap again', '#FFC300'], [.92, 'The tagger (yellow) chases']], 3.4)
+});
+
+D({ id: 'safari', name: 'Movement Safari', role: 'w', focus: ['agility', 'speed'], int: 2, dur: [4, 7], min: 4, max: 24, ball: 0,
+  setup: ['Put 2 lines of cones about 15 big steps apart.', 'Everyone lines up along one line, spread out with space to move.'],
+  how: 'Coach calls an animal and everyone crosses the box moving like it: bear crawl, frog jumps, zig-zag skips, crab walk. Race back with fast feet.',
+  pts: ['Small, quick steps on your toes', 'Arms help you balance', 'Bend your knees when you land'],
+  easy: 'Shorter distance; walk the hard ones.', hard: 'Add a ball: dribble back after each animal.',
+  anim: () => {
+    const a = A(9).area(15, 8, 70, 48).cones('18,8 18,56 50,8 50,56 82,8 82,56', 'y');
+    for (let i = 0; i < 5; i++) {
+      const y = 15 + i * 8.5;
+      a.p(i % 2 ? 'b' : 'r', t => {
+        if (t < .33) return [20 + 30 * (t / .33), y];
+        if (t < .66) { const k = ((t - .33) / .33) * 5, f = Math.floor(k), fr = k - f; return [50 + 30 * ((f + (fr < .55 ? 0 : (fr - .55) / .45)) / 5), y]; }
+        const u = (t - .66) / .34; return [80 - 60 * u, y + Math.sin(u * Math.PI * 6) * 3];
+      });
+    }
+    return a.text(50, 5.5, [[0, 'Bear crawl'], [.33, 'Frog jumps'], [.66, 'Zig-zag skips back']]);
+  }
+});
+
+D({ id: 'garden', name: 'Clear the Garden', role: 'w g', focus: ['passing', 'shooting', 'teamwork'], int: 3, dur: [5, 10], min: 6, max: 20, ball: 'half', cones: [6, 0],
+  setup: ['Mark a box about 30 × 20 big steps and cone a halfway line.', 'Two teams, one in each half. Spread the balls evenly between the halves.'],
+  how: 'Kick balls out of your half into the other team\'s half. On the whistle, freeze. The team with fewer balls in their half wins.',
+  pts: ['Stop the ball first, then kick', 'Laces for distance, toes up', 'Find the empty spaces in their half'],
+  easy: 'Any kick counts, even rolled with the hands.', hard: 'Must be a pass along the ground; weaker foot only.',
+  anim: () => A(8).area(10, 6, 80, 52).corners(10, 6, 80, 52).cone(50, 6).cone(50, 58).line(50, 6, 50, 58)
+    .p('r', '0:24,22 .12:29,19 .3:27,24 .7:27.5,26 .85:26,22', '', 'r1').p('r', '0:26,46 .35:31,44 .55:28,42 .9:27,38', '', 'r2').p('r', '0:38,48 .3:37.5,49.5 .5:40,40 .7:38,48', '', 'r3')
+    .p('b', '0:76,20 .4:71,15 .6:74,20 .9:73,22', '', 'b1').p('b', '0:70,38 .1:68.5,39 .4:74,42 .65:74.5,45 .8:72,40', '', 'b2').p('b', '0:66,26 .6:64.5,28.5 .8:70,34', '', 'b3')
+    .b('0:32,18 .12:32,18 .22:68,14^ .4:68,14 .5:30,26^ .7:30,26 .8:70,22^ .9:70,22 1:32,18^')
+    .b('0:66,40 .1:66,40 .2:34,44^ .35:34,44 .45:72,46^ .65:72,46 .75:30,38^ .9:30,38 1:66,40^')
+    .b('0:40,52 .3:40,52 .4:62,30^ .6:62,30 .7:40,52^')
+    .text(50, 4.4, [[0, 'Kick them into their half!'], [.9, 'Whistle: count the balls', '#FFC300']], 3.4)
+});
+
+D({ id: 'passtag', name: 'Pass Tag', role: 'w s', focus: ['passing', 'speed', 'dribbling'], int: 2, dur: [5, 9], min: 6, max: 16, ball: 'third', bibs: 'few',
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'One tagger in a bib with a ball (two taggers if there are more than 10). Everyone else runs around without a ball.'],
+  how: 'The tagger dribbles close to a runner and passes the ball along the ground to hit their shoe. If it hits you, you take the bib and the ball: now you\'re the tagger, and the old tagger becomes a runner.',
+  pts: ['Tagger: get close before you pass', 'Side of the foot, along the ground, never high', 'Runners: watch the ball and dodge'],
+  easy: 'Bigger box; runners walk.', hard: 'The tagger must use their weaker foot.',
+  anim: () => A(9).area(15, 6, 70, 52).corners(15, 6, 70, 52)
+    .crowd({ n: 4, box: [15, 6, 70, 52], c: 'r', seed: 71, steps: 5, ball: false })
+    .p('y', '0:26,18 .3:40,28 .36:42,30 .45:36,40 .6:30,48 .75:41,45 .86:45,41 1:26,18', 'T', 't').col([[0, 'y', 'T'], [.42, 'r', ''], [.86, 'y', 'T']])
+    .p('r', '0:62,22 .2:56,28 .36:52,32 .42:51,33 .55:55,38 .7:53,42 .8:50.5,40 .86:52,37 1:62,22', '', 'v').col([[0, 'r', ''], [.42, 'y', 'T'], [.86, 'r', '']])
+    .b('0@t .36@t .42@v .8@v .86@t')
+    .text(50, 4.4, [[0, 'Tagger (yellow) dribbles close'], [.36, 'Pass to hit their shoe', '#FFC300'], [.43, 'Hit! They swap: new tagger', '#8CFF7A'], [.6, 'New tagger dribbles close'], [.8, 'Pass to hit their shoe', '#FFC300'], [.87, 'Hit! Swap again', '#8CFF7A']], 3.4)
+});
+
+D({ id: 'mirror', name: 'Mirror Me', role: 'w s', focus: ['speed', 'agility', 'ballmastery'], int: 2, dur: [5, 8], min: 2, max: 20, ball: 'half', cones: [0, 1],
+  setup: ['Pairs face each other across a line of cones, about 3 big steps apart.', 'Put a cone 5 steps to each side of every pair. The leader has a ball.'],
+  how: 'The leader dribbles side to side and the partner copies like a mirror. On "Go!" the leader races to touch a side cone; the partner tries to get there first. Swap leaders.',
+  pts: ['Stay low, on your toes', 'Small side-steps, don\'t cross your feet', 'Watch your partner\'s hips'],
+  easy: 'No ball for the leader.', hard: 'The partner dribbles a ball too.',
+  anim: () => {
+    const a = A(8).area(10, 10, 80, 44);
+    [25, 50, 75].forEach((cx, i) => {
+      a.cone(cx - 11, 32, 'y').cone(cx + 11, 32, 'y');
+      const lx = t => t < .72 ? cx + 7 * Math.sin(2 * Math.PI * 2.2 * t + i) : t < .82 ? cx + 7 * Math.sin(2 * Math.PI * 2.2 * .72 + i) + (10 * (i % 2 ? 1 : -1) - 7 * Math.sin(2 * Math.PI * 2.2 * .72 + i)) * ((t - .72) / .1) : cx + 10 * (i % 2 ? 1 : -1) + (7 * Math.sin(i) - 10 * (i % 2 ? 1 : -1)) * ((t - .82) / .18);
+      a.p('r', t => [lx(t), 24], '', 'l' + i).face(0, 1, true).b(`0@l${i} 1@l${i}`);
+      a.p('b', t => [lx(wrap(t - .03)), 40]);
+    });
+    return a.text(50, 7.5, [[0, 'Copy your partner!'], [.72, '"Go!" Race to a cone', '#FFC300']]);
+  }
+});
+
+/* ---------------- BALL MASTERY, DRIBBLING, TURNING ---------------- */
+D({ id: 'belts', name: 'Skills Belts', role: 's w', focus: ['ballmastery', 'bothfeet', 'dribbling'], int: 1, dur: [6, 12], min: 3, max: 16, cones: [0, 1],
+  setup: ['Put out a cone for each player, 3 big steps apart, in a line or circle.', 'Everyone stands at a cone with a ball, facing the coach.'],
+  how: 'Like karate belts: the coach shows a move, everyone practises it for 30 seconds, then moves up a belt. White: toe taps. Yellow: sole rolls. Green: pull back and push. Black: step-over and go.',
+  pts: ['Light touches, stay on your toes', 'Both feet every time', 'Say "well done" to anyone who gets a new belt'],
+  easy: 'Stay on white and yellow belts.', hard: 'Do each belt with eyes on the coach, not the ball.',
+  anim: () => {
+    const a = A(10).area(15, 14, 70, 40);
+    [22, 36, 50, 64, 78].forEach((x, i) => {
+      a.cone(x, 44, 'w');
+      a.p('r', t => {
+        if (t < .25) return [x, 34 + Math.sin(t * 80) * .3];
+        if (t < .5) return [x + Math.sin((t - .25) * Math.PI * 12) * 3, 34];
+        if (t < .75) return [x, 34 + Math.sin((t - .5) * Math.PI * 12) * 3];
+        return [x, 34 - 11 * Math.sin(Math.PI * (t - .75) / .25)];
+      }, '', 'p' + i).face(0, -1, true).b(`0@p${i} 1@p${i}`);
+    });
+    return a.p('k', '0:50,58 1:50,58', 'C')
+      .text(50, 9.5, [[0, 'White belt: toe taps'], [.25, 'Yellow belt: sole rolls', '#FFE14D'], [.5, 'Green belt: pull back, push', '#B7F171'], [.75, 'Black belt: step-over and go', '#D0D0D0']], 3.4);
+  }
+});
+
+D({ id: 'slalom', name: 'Slalom Race', role: 's', focus: ['dribbling', 'bothfeet', 'running'], int: 2, dur: [5, 10], min: 2, max: 12, cones: [0, 2.5],
+  setup: ['Make one lane for every 2 players: 4 cones in a line, 2 big steps apart.', 'Partners stand at the start of their lane, a ball each.'],
+  how: 'One partner weaves in and out of the cones, then races back on the outside. When they\'re home, the partner goes. Count how many runs you do together in 2 minutes.',
+  pts: ['Use the inside and outside of the foot', 'Tiny touches close to the cones', 'Big touch and sprint on the way back'],
+  easy: 'Space the cones wider.', hard: 'Weave with your weaker foot only; or do it with the sole.',
+  anim: () => {
+    const a = A(8).area(10, 6, 80, 52);
+    [18, 34, 50].forEach((y, i) => {
+      a.cones(`35,${y} 45,${y} 55,${y} 65,${y}`, 'y').cone(18, y, 'w');
+      const run = t0 => `${t0}:22,${y} ${t0 + .05}:35,${y - 3.5} ${t0 + .1}:45,${y + 3.5} ${t0 + .15}:55,${y - 3.5} ${t0 + .2}:65,${y + 3.5} ${t0 + .25}:72,${y} ${t0 + .38}:40,${y + 6.5} ${t0 + .45}:22,${y + 3}`;
+      a.p('r', `${run(0)} .5:15,${y + 3} .92:15,${y + 3} 1:22,${y}`, '', 'a' + i).b(`0@a${i} 1@a${i}`);
+      a.p('r', `0:15,${y - 2} .42:15,${y - 2} ${run(.5)} 1:15,${y - 2}`, '', 'b' + i).b(`0@b${i} 1@b${i}`);
+    });
+    return a.text(50, 4.4, 'Weave in, race back on the outside', 3.2);
+  }
+});
+
+D({ id: 'knockrun', name: 'Knock and Chase', role: 's w', focus: ['running', 'speed', 'dribbling'], int: 3, dur: [5, 9], min: 2, max: 16, cones: [0, 2],
+  setup: ['Make lanes about 20 big steps long: a cone at each end, one lane per player or pair.', 'Everyone starts at the near cone with a ball.'],
+  how: 'Push the ball out in front with a big touch, sprint after it, and push again. Stop it dead on the far line, then little touches back. Race the player next to you.',
+  pts: ['Push it 3–4 steps ahead with your laces', 'Sprint to catch it, don\'t let it run away', 'Sole on top to stop on the line'],
+  easy: 'Shorter lanes, no racing.', hard: 'Coach shouts "Turn!" halfway and everyone turns back.',
+  anim: () => {
+    const a = A(7).area(10, 6, 80, 52).line(80, 6, 80, 58);
+    [14, 26, 38, 50].forEach((y, i) => {
+      a.cone(16, y, 'w').cone(80, y, 'y');
+      a.p(i % 2 ? 'b' : 'r', `0:18,${y} .12:30,${y} .24:44,${y} .36:58,${y} .46:76,${y} .52:77,${y} .95:20,${y}`, '', 'p' + i)
+        .b(`0@p${i} .02@p${i} .1:33,${y} .12@p${i} .14@p${i} .22:47,${y} .24@p${i} .26@p${i} .34:61,${y} .36@p${i} .38@p${i} .45:80,${y} .52:80,${y} .53@p${i} .95@p${i}`);
+    });
+    return a.text(50, 4.4, [[0, 'Big touch, chase it!'], [.46, 'Stop it on the line!', '#FFC300'], [.56, 'Little touches back']]);
+  }
+});
+
+D({ id: 'turnline', name: 'Turn on the Line', role: 's', focus: ['turning', 'dribbling', 'bothfeet'], int: 2, dur: [5, 10], min: 2, max: 14, cones: [4, 1],
+  setup: ['Make a start line and a turning line about 15 big steps apart with cones.', 'Players spread out along the start line, a ball each.'],
+  how: 'Dribble to the turning line, do the turn the coach calls (drag-back, inside hook, outside hook, Cruyff), and dribble back fast. New turn each time.',
+  pts: ['Slow down before the turn', 'Turn with the ball under your body', 'Burst away fast after the turn'],
+  easy: 'Only the drag-back (sole) turn.', hard: 'Coach calls the turn late, just before the line.',
+  anim: () => {
+    const a = A(8).area(15, 8, 70, 48).cones('20,8 20,56', 'w').cones('72,8 72,56', 'y').line(72, 8, 72, 56);
+    [16, 27, 38, 49].forEach((y, i) => {
+      a.p('r', `0:22,${y} .25:67,${y} .3:66,${y} .5:22,${y} .75:67,${y} .8:66,${y} 1:22,${y}`, '', 'p' + i).b(`0@p${i} 1@p${i}`);
+    });
+    return a.text(50, 5.6, [[0, 'Turn: drag-back'], [.5, 'Turn: inside hook']]);
+  }
+});
+
+D({ id: 'escape', name: 'Escape the Square', role: 's w', focus: ['turning', 'dribbling', 'speed'], int: 2, dur: [5, 9], min: 4, max: 14, cones: [12, 0],
+  setup: ['Make a small square (10 × 10 big steps) inside a bigger square (20 × 20).', 'Put 2 cones of one colour on each side of the big square: red, blue, yellow, green.', 'Everyone dribbles inside the small square.'],
+  how: 'Coach calls a colour: everyone dribbles out of the small square to that side, turns at the line, and dribbles back in. First back in wins.',
+  pts: ['Heads up to find the right side', 'Turn fast at the line', 'Use both feet to turn'],
+  easy: 'Point to the side as you call it.', hard: 'Call two colours: visit both before coming back.',
+  anim: () => A(8).area(16, 6, 68, 52).corners(40, 22, 20, 20, 'w')
+    .cones('84,22 84,42', 'b').cones('40,58 60,58', 'y').cones('40,6 60,6', 'r').cones('16,22 16,42', 'g')
+    .p('r', '0:44,28 .25:54,26 .45:80,27 .6:46,29 .8:45,55 .95:53,30', '', 'a')
+    .p('r', '0:54,30 .25:46,34 .45:80,33 .6:52,36 .8:52,55 .95:44,34', '', 'b')
+    .p('r', '0:48,36 .25:56,38 .45:80,38 .6:48,32 .8:58,55 .95:50,26', '', 'c')
+    .p('r', '0:56,38 .25:44,28 .45:80,24 .6:55,26 .8:42,55 .95:56,37', '', 'd')
+    .b('0@a 1@a').b('0@b 1@b').b('0@c 1@c').b('0@d 1@d')
+    .text(50, 4.2, [[0, 'Dribble inside'], [.25, '"BLUE side!"', '#4CC9F0'], [.6, '"YELLOW side!"', '#FFE14D'], [.95, 'Dribble inside']], 3.4)
+});
+
+D({ id: 'conedefender', name: 'Beat the Cone Defender', role: 's', focus: ['1v1', 'dribbling', 'turning'], int: 2, dur: [5, 10], min: 2, max: 12, cones: [0, 2],
+  setup: ['Make one lane per pair: a start cone, a tall "defender" cone 10 steps out, and a 2-cone gate 5 steps past it.', 'Partners share a lane, a ball each.'],
+  how: 'Dribble at the cone defender, do a move to beat it (step-over, scissors, body swerve), then sprint through the gate. Dribble back on the outside; partner goes.',
+  pts: ['Dribble straight at the defender', 'Do the move just before the cone', 'Explode away after the move'],
+  easy: 'No move needed: just go round it fast.', hard: 'Coach calls which side to go and which move to use.',
+  anim: () => {
+    const a = A(7).area(10, 6, 80, 52);
+    [16, 32, 48].forEach((y, i) => {
+      a.cone(16, y, 'w').cone(50, y, 'r').gate(84, y - 1, true, 5);
+      a.p(i === 1 ? 'b' : 'r', `0:18,${y} .25:44,${y} .3:47,${y + 2} .35:53,${y - 4} .45:76,${y - 3} .5:86,${y - 1} .56:86,${y + 5} .9:18,${y + 5}`, '', 'p' + i).ph(i * .18).b(`0@p${i} 1@p${i}`, i * .18);
+    });
+    return a.text(50, 4.4, [[0, 'Dribble at the cone…'], [.28, 'Step-over…', '#FFC300'], [.35, '…and GO!', '#8CFF7A'], [.55, 'Back on the outside']], 3.4);
+  }
+});
+
+D({ id: 'figure8', name: 'Figure of Eight', role: 's w', focus: ['ballmastery', 'bothfeet', 'dribbling'], int: 1, dur: [5, 8], min: 2, max: 16, cones: [0, 2],
+  setup: ['Give each player 2 cones, 4 big steps apart.', 'Everyone has a ball.'],
+  how: 'Dribble a figure of eight around your two cones. Right foot only on one loop, left foot only on the other. Count your eights in 1 minute.',
+  pts: ['Small touches, ball close round the cone', 'Outside of the foot to go round', 'Switch feet in the middle'],
+  easy: 'Any foot, any touch.', hard: 'Sole of the foot only; or eyes up, call out the coach\'s colour.',
+  anim: () => {
+    const a = A(8);
+    [[30, 18], [70, 18], [30, 46], [70, 46]].forEach(([cx, cy], i) => {
+      a.cone(cx - 7, cy, 'y').cone(cx + 7, cy, 'y');
+      a.p(i % 2 ? 'b' : 'r', t => [cx + 12 * Math.sin(2 * Math.PI * t), cy + 6 * Math.sin(4 * Math.PI * t)], '', 'p' + i).ph(i * .13).b(`0@p${i} 1@p${i}`);
+    });
+    return a.text(50, 33.2, [[0, 'Right foot loop'], [.5, 'Left foot loop']], 3.4);
+  }
+});
+
+D({ id: 'fingers', name: 'Count the Fingers', role: 's w', focus: ['dribbling', 'speed', 'turning'], int: 2, dur: [5, 8], min: 3, max: 14,
+  setup: ['Mark a circle of cones about 15 big steps across.', 'Coach stands in the middle. Players start on the edge, a ball each.'],
+  how: 'Players dribble towards the coach, who holds up some fingers. Shout the number, turn, and dribble back out to the edge.',
+  pts: ['Head up! You can\'t see fingers looking at the ball', 'Shout the number loud', 'Turn away from the coach and speed off'],
+  easy: 'Coach holds up big colour cones instead of fingers.', hard: 'Shout the number plus one; or turn with the weaker foot.',
+  anim: () => {
+    const a = A(8).p('k', '0:50,32 1:50,32', 'C');
+    for (let i = 0; i < 6; i++) {
+      const ang = (i / 6) * Math.PI * 2, ang2 = ang + .45, P = (r, g) => [50 + r * 1.3 * Math.cos(g), 32 + r * Math.sin(g)];
+      a.cone(...P(26, ang + .25), 'w');
+      const k = [[0, ...P(22, ang)], [.25, ...P(8, ang)], [.5, ...P(22, ang2)], [.75, ...P(8, ang2)]].map(v => K(...v)).join(' ');
+      a.p(i % 2 ? 'b' : 'r', k, '', 'p' + i).b(`0@p${i} 1@p${i}`);
+    }
+    return a.text(50, 5, [[0, 'Dribble at the coach…'], [.2, 'Coach shows 3 fingers', '#FFC300'], [.27, '"THREE!" Turn away', '#8CFF7A'], [.5, 'Dribble at the coach…'], [.72, '"FIVE!" Turn away', '#8CFF7A']]);
+  }
+});
+
+/* ---------------- PASSING AND FIRST TOUCH ---------------- */
+D({ id: 'passgates', name: 'Pass Through the Gates', role: 's w', focus: ['passing', 'firsttouch', 'teamwork'], int: 2, dur: [5, 10], min: 4, max: 16, ball: 'half', cones: [4, 1],
+  setup: ['Mark a box about 25 × 25 big steps with 4 cones.', 'Set out {half} little gates (2 cones, 2 steps apart) around the box.', 'Players in pairs, one ball per pair.'],
+  how: 'Pairs pass the ball through a gate to each other, then dribble to a new gate and do it again. How many gates can your pair score in 1 minute?',
+  pts: ['Pass with the inside of the foot', 'Stop it before you pass back', 'Talk to your partner: "Next gate!"'],
+  easy: 'Bigger gates, partners closer.', hard: 'One-touch passes only; or must go both ways through each gate.',
+  anim: () => A(8).area(10, 6, 80, 52).corners(10, 6, 80, 52)
+    .gate(32, 20).gate(60, 16).gate(45, 44).gate(70, 50).gate(78, 30).gate(24, 40).gate(52, 30)
+    .p('r', '0:24,20 .25:24,20 .4:52,16 .6:52,16 .75:37,44 .95:37,44', '', 'A').p('r', '0:40,20 .25:40,20 .4:68,16 .6:68,16 .75:53,44 .95:53,44', '', 'B')
+    .b('0@A .02@A .08@B .14@B .2@A .25@A .4@A .44@A .5@B .54@B .6@A .75@A .79@A .85@B .89@B .95@A')
+    .p('b', '0:62,50 .25:62,50 .4:70,30 .6:70,30 .75:16,40 .95:16,40', '', 'C').p('b', '0:78,50 .25:78,50 .4:86,30 .6:86,30 .75:32,40 .95:32,40', '', 'D')
+    .b('0@D .04@D .1@C .16@C .22@D .25@D .4@D .44@D .5@C .54@C .6@D .75@D .79@D .85@C .89@C .95@D')
+    .text(50, 4.4, 'Pass through, then find a new gate', 3.2)
+});
+
+D({ id: 'passshuffle', name: 'Pass and Shuffle', role: 's', focus: ['passing', 'firsttouch', 'agility'], int: 2, dur: [5, 9], min: 2, max: 16, ball: 'half', cones: [0, 1.5],
+  setup: ['Pairs stand about 8 big steps apart.', 'The receiver has 2 cones, 3 steps apart, to shuffle between.', 'One ball per pair.'],
+  how: 'The receiver shuffles to a cone, the passer passes to them, and they pass straight back. Shuffle to the other cone and go again. Swap after 1 minute.',
+  pts: ['Side-steps, stay facing your partner', 'Pass to the cone your partner is moving to', 'Firm pass, along the ground'],
+  easy: 'Receiver stops the ball before passing back.', hard: 'One touch; then weaker foot only.',
+  anim: () => {
+    const a = A(8).area(15, 8, 70, 48);
+    [16, 32, 48].forEach((y, i) => {
+      a.cone(65, y - 4.5, 'y').cone(65, y + 4.5, 'y');
+      a.p('r', `0:34,${y} 1:34,${y}`, '', 'P' + i).face(1, 0, true);
+      const rk = [], bk = [`0@P${i}`];
+      for (let s = 0; s < 4; s++) {
+        const t0 = s * .25, yy = s % 2 ? y + 4.5 : y - 4.5;
+        rk.push(K(t0 + .12, 64, yy), K(t0 + .22, 64, yy));
+        bk.push(`${(t0 + .06).toFixed(2)}@P${i}`, `${(t0 + .14).toFixed(2)}@R${i}`, `${(t0 + .16).toFixed(2)}@R${i}`, `${(t0 + .24).toFixed(2)}@P${i}`);
+      }
+      a.p(i === 1 ? 'b' : 'r', `0:64,${y} ` + rk.join(' '), '', 'R' + i).face(-1, 0, true);
+      a.b(bk.join(' '));
+    });
+    return a.text(50, 5.5, 'Shuffle, receive, pass back', 3.4);
+  }
+});
+
+/* pass-and-follow round a shape: players all look alike, so the loop is seamless */
+function passFollow(a, pts, col) {
+  const n = pts.length, step = 1 / n;
+  const bk = [];
+  pts.forEach((p, i) => {
+    const nx = pts[(i + 1) % n], tp = i * step;
+    a.p(col, `0:${p[0]},${p[1]} ${K(tp + .02, ...p)} ${K(tp + step * .8, ...nx)} ${K(1, ...nx)}`, '', 'q' + i);
+  });
+  for (let i = 0; i < n; i++) {
+    const tp = i * step;
+    if (i === 0) bk.push('0@q0', `${(tp + .02).toFixed(3)}@q0`);
+    else bk.push(`${(tp - step + .1).toFixed(3)}@q${i}`, `${(tp + .02).toFixed(3)}@q${i}`);
+  }
+  bk.push(K(1 - step + .1, pts[0][0] + 2, pts[0][1]));
+  bk.push(K(.999, pts[0][0] + 2, pts[0][1]));
+  return a.b(bk.join(' '));
+}
+
+D({ id: 'passsquare', name: 'Passing Square', role: 's', focus: ['passing', 'firsttouch', 'teamwork'], int: 1, dur: [5, 10], min: 4, max: 7, ball: 1, cones: [4, 0],
+  setup: ['Make a square with 4 cones, about 10 big steps apart.', 'One player at each cone; extras queue at the first cone. One ball.'],
+  how: 'Pass to the next cone, then run and follow your pass. The new player stops it, passes on, and follows. After 1 minute switch direction.',
+  pts: ['Stop it, look, pass', 'Follow your pass at a jog', 'Call your teammate\'s name before you pass'],
+  easy: 'Smaller square.', hard: 'Two touches max, then one touch; add a second ball.',
+  anim: () => passFollow(A(8).corners(30, 14, 40, 36, 'y'), [[30, 14], [70, 14], [70, 50], [30, 50]], 'r')
+    .text(50, 33, 'Pass and follow', 3.6)
+});
+
+D({ id: 'triangle', name: 'Pass and Move Triangle', role: 's', focus: ['passing', 'firsttouch', 'speed'], int: 2, dur: [5, 10], min: 3, max: 6, ball: 1, cones: [3, 0],
+  setup: ['Make a triangle with 3 cones, about 10 big steps apart.', 'Groups of 3 (or 4, with two at one cone). One ball.'],
+  how: 'Pass to the next cone and sprint after your pass. Receive on your back foot (the foot furthest from the ball) so you\'re already facing the next cone.',
+  pts: ['Open your body to receive', 'Pass then move, don\'t stand and watch', 'Firm passes'],
+  easy: 'Two touches every time.', hard: 'Change direction on the coach\'s call; one touch only.',
+  anim: () => passFollow(A(7).cones('28,50 72,50 50,12', 'y'), [[28, 50], [72, 50], [50, 12]], 'b')
+    .text(50, 60, 'Pass, then sprint after it', 3.4)
+});
+
+D({ id: 'skittles', name: 'Skittles', role: 's w', focus: ['passing', 'shooting', 'bothfeet'], int: 2, dur: [5, 10], min: 4, max: 12, ball: 'half', cones: [10, 0],
+  setup: ['Make two lines of cones about 20 big steps apart; one team behind each.', 'Stand 5–6 cones ("skittles") in a row on the halfway line.', 'Half the players have a ball.'],
+  how: 'Pass at the skittles to knock them over. Balls that roll through go to the other team. First team to knock 5 down wins; coach stands them back up.',
+  pts: ['Plant your other foot next to the ball', 'Inside of the foot for accuracy', 'Follow through towards the target'],
+  easy: 'Move the lines closer.', hard: 'Weaker foot only; or first-time passes.',
+  anim: () => A(8).area(15, 8, 70, 48).cones('50,14 50,22 50,30 50,38 50,46', 'w').line(20, 8, 20, 56).line(80, 8, 80, 56)
+    .p('r', '0:20,22 1:20,22', '', 'r1').face(1, 0, true).p('r', '0:20,40 1:20,40', '', 'r2').face(1, 0, true).p('r', '0:20,31 .3:20,33 1:20,31')
+    .p('b', '0:80,22 1:80,22', '', 'b1').face(-1, 0, true).p('b', '0:80,40 1:80,40', '', 'b2').face(-1, 0, true).p('b', '0:80,31 .4:80,29 1:80,31')
+    .b('0@r1 .04@r1 .14:49,22 .24:74,22 .3@b1 .5@b1 .6:51,30 .7:25,27 .76@r1')
+    .b('0@b2 .04@b2 .14:51,38 .24:26,40 .3@r2 .5@r2 .6:49,46 .7:76,44 .76@b2')
+    .text(50, 5.5, [[0, ''], [.13, 'Hit! +1', '#FFC300'], [.26, ''], [.59, 'Hit! +1', '#FFC300'], [.72, '']])
+});
+
+D({ id: 'rondo', name: 'Piggy in the Middle', role: 's', focus: ['possession', 'passing', 'defending'], int: 2, dur: [6, 10], min: 4, max: 6, ball: 1, cones: [4, 0], bibs: 'few',
+  setup: ['Make a square with 4 cones, about 8 × 8 big steps.', 'One player on each side; 1 "piggy" (bib) in the middle. One ball.'],
+  how: 'The outside players pass to keep it away from the piggy. 5 passes in a row = a point. If the piggy touches the ball, the passer swaps into the middle.',
+  pts: ['Move along your side to make a good angle', 'Pass to the player furthest from the piggy', 'Piggy: run at the ball, block the pass'],
+  easy: 'Two touches allowed; piggy can only block, not steal.', hard: 'Two piggies; or one touch only.',
+  anim: () => A(8).corners(30, 12, 40, 40, 'y')
+    .p('r', '0:50,12 .3:46,12 .6:54,12', '', 'N').face(0, 1, true)
+    .p('r', '0:70,32 .4:70,26 .8:70,36', '', 'E').face(-1, 0, true)
+    .p('r', '0:50,52 .5:56,52', '', 'S').face(0, -1, true)
+    .p('r', '0:30,32 .5:30,38', '', 'W').face(1, 0, true)
+    .p('y', '0:50,30 .1:58,30 .28:52,40 .48:50,24 .66:40,32 .84:48,42 .95:50,30', 'P')
+    .b('0@N .02@N .1@E .18@E .28@S .36@S .48@N .56@N .66@W .74@W .84@S .9@S')
+    .text(50, 6, [[0, 'Passes: 0'], [.1, 'Passes: 1'], [.28, 'Passes: 2'], [.48, 'Passes: 3'], [.66, 'Passes: 4'], [.84, '5 passes = a point!', '#FFC300']])
+});
+
+D({ id: 'throwtrap', name: 'Throw, Trap, Pass', role: 's w', focus: ['firsttouch', 'passing', 'agility'], int: 1, dur: [5, 9], min: 2, max: 16, ball: 'half', cones: [0, 1],
+  setup: ['Pairs stand about 5 big steps apart (a cone each).', 'One ball per pair; the thrower holds it.'],
+  how: 'The thrower throws underarm. The receiver traps it with the sole, thigh or chest so it drops dead, then passes back along the ground. 10 goes, then swap.',
+  pts: ['Get your body behind the ball', 'Soft, like catching an egg', 'Trap it, then pass straight back'],
+  easy: 'Roll it along the ground first.', hard: 'Throw higher or to the side; trap with the weaker foot.',
+  anim: () => {
+    const a = A(7).area(20, 8, 60, 48);
+    [16, 32, 48].forEach((y, i) => {
+      a.p('b', `0:36,${y} 1:36,${y}`, '', 'T' + i).face(1, 0, true);
+      a.p('r', `0:64,${y} .3:63,${y + 2} .6:64,${y - 2} 1:64,${y}`, '', 'R' + i).face(-1, 0, true);
+      a.b(`0:38,${y} .05:38,${y} .15@R${i}^ .22@R${i} .32@T${i} .35:38,${y} .55:38,${y} .65@R${i}^ .72@R${i} .82@T${i} .85:38,${y}`, i * .07);
+    });
+    return a.text(50, 5.5, [[0, 'Throw…'], [.15, 'Trap it dead', '#FFC300'], [.22, 'Pass it back'], [.5, 'Throw…'], [.65, 'Trap it dead', '#FFC300'], [.72, 'Pass it back']]);
+  }
+});
+
+D({ id: 'openup', name: 'Open Up and Go', role: 's', focus: ['firsttouch', 'turning', 'passing'], int: 2, dur: [5, 10], min: 3, max: 5, ball: 1, cones: [7, 0],
+  setup: ['3 cones in a line, about 8 big steps apart: one player at each.', 'Put a little gate either side of the middle cone (above and below).', 'One ball; rotate positions every minute.'],
+  how: 'An end player passes to the middle. The middle player\'s first touch goes through a side gate, then they pass to the other end. Back the other way through the other gate.',
+  pts: ['Open your body to see both ends', 'First touch away from your feet, through the gate', 'Pass with the second touch'],
+  easy: 'Take as many touches as you need.', hard: 'Coach shouts which gate just before the pass arrives.',
+  anim: () => A(8).cones('20,32 80,32', 'w').cone(50, 32, 'w').gate(50, 19, false, 6).gate(50, 45, false, 6)
+    .p('r', '0:20,32 1:20,32', '', 'Aa').face(1, 0, true)
+    .p('r', '0:80,32 1:80,32', '', 'Bb').face(-1, 0, true)
+    .p('b', '0:50,32 .12:50,32 .2:50,18 .28:50,18 .36:50,32 .52:50,32 .6:50,46 .7:50,46 .78:50,32', '', 'M')
+    .b('0@Aa .03@Aa .12@M .13@M .18:50,17 .2@M .26@M .34@Bb .45@Bb .52@M .54@M .58:50,47 .6@M .66@M .74@Aa')
+    .text(50, 6, [[0, 'Receive…'], [.13, 'First touch through the gate', '#FFC300'], [.26, 'Pass on'], [.52, 'Receive…'], [.54, 'First touch through the gate', '#FFC300'], [.66, 'Pass on']], 3.4)
+});
+
+D({ id: 'droptrap', name: 'Drop and Trap', role: 'w s', focus: ['firsttouch', 'agility', 'dribbling'], int: 1, dur: [4, 8], min: 2, max: 20,
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Everyone has a ball in their hands.'],
+  how: 'Drop the ball and trap it with your sole (or laces) so it stays dead. Then dribble to a new space, pick it up and go again. Count clean traps.',
+  pts: ['Drop it from waist height', 'Meet it as it bounces, soft foot', 'Eyes on the ball until it\'s dead'],
+  easy: 'Let it bounce once, then trap.', hard: 'Throw it up higher; trap with thigh then foot.',
+  anim: () => {
+    const a = A(8).area(15, 6, 70, 52).corners(15, 6, 70, 52);
+    [[28, 16, 46, 26], [60, 14, 72, 28], [36, 40, 54, 48], [70, 44, 50, 34], [24, 32, 30, 50]].forEach(([x0, y0, x1, y1], i) => {
+      a.p(i % 2 ? 'b' : 'r', `0:${x0},${y0} .3:${x0},${y0} .5:${x1},${y1} .8:${x1},${y1} 1:${x0},${y0}`, '', 'p' + i).face(1, 0);
+      a.b(`0:${x0},${y0} .06:${x0},${y0} .13:${x0 + 2.7},${y0}^ .14@p${i} .5@p${i} .56:${x1},${y1} .63:${x1 + 2.7},${y1}^ .64@p${i} 1@p${i}`);
+    });
+    return a.text(50, 4.3, [[0, 'Drop it…'], [.13, 'Trap it dead!', '#FFC300'], [.3, 'Dribble to a new space'], [.56, 'Drop it…'], [.63, 'Trap it dead!', '#FFC300'], [.8, 'Dribble back']], 3.4);
+  }
+});
+
+D({ id: 'footgolf', name: 'Football Golf', role: 's', focus: ['passing', 'dribbling', 'firsttouch'], int: 1, dur: [6, 12], min: 2, max: 10, cones: [8, 0],
+  setup: ['Set out 4 little gates ("holes") spread around a 25 × 25 big-step area. Number them 1–4.', 'Everyone has a ball and starts at the tee cone.'],
+  how: 'Pass your ball through the holes in order, in as few kicks as you can. Walk to your ball after each kick. Count your kicks and try to beat it next round.',
+  pts: ['Look at the gate, then the ball, then pass', 'Short passes are safer than big kicks', 'Stop the ball before your next kick'],
+  easy: 'Bigger gates; dribbling through counts too.', hard: 'Weaker foot only; or one hole is a "chip" over a cone.',
+  anim: () => {
+    const a = A(10).cone(15, 54, 'w').gate(28.5, 46.5).gate(44, 35).gate(63, 23).gate(76.5, 30, false)
+      .text(28.5, 42, '1', 3.4).text(44, 30.5, '2', 3.4).text(63, 18.5, '3', 3.4).text(81.5, 31, '4', 3.4);
+    const keys = '0:18,52 .06:19,52 .2:33,43 .24:33,43 .4:53,29 .44:53,29 .6:69,19 .64:69,19 .84:80,38 1:18,52';
+    const bal = '0@p .05@p .12:36,42 .2@p .24@p .32:56,28 .4@p .44@p .52:72,18 .6@p .64@p .74:80,41 .84@p';
+    a.p('r', keys, '', 'p').b(bal).p('b', keys, '', 'q').ph(.5).b(bal.replace(/@p/g, '@q'), .5);
+    return a.text(50, 5, [[0, 'Kicks: 1'], [.24, 'Kicks: 2'], [.44, 'Kicks: 3'], [.64, 'Kicks: 4'], [.76, 'Round done in 4!', '#FFC300']]);
+  }
+});
+
+/* ---------------- SHOOTING ---------------- */
+D({ id: 'twogoal', name: 'Two-Goal Shootout', role: 's', focus: ['shooting', 'gk', 'dribbling'], int: 2, dur: [6, 12], min: 4, max: 10, cones: [6, 0],
+  setup: ['Two goals facing each other about 25 big steps apart (pop-up goals or 2 tall cones each).', 'A keeper in each goal. Shooters split into two lines at opposite corners, a ball each.', 'A shooting cone 8 steps out from each goal.'],
+  how: 'Both lines go at once: dribble past the shooting cone and shoot at the far goal. Collect your ball and join the other line. New keepers every 4 shots.',
+  pts: ['Head up: where is the keeper?', 'Laces for power, side-foot to place it', 'Shoot low and hard'],
+  easy: 'No keepers; aim at the corners.', hard: 'Must shoot before the cone; or weaker foot only.',
+  anim: () => A(8).area(10, 6, 80, 52).goal(10, 32, 'L', 11).goal(90, 32, 'R', 11).cone(64, 40, 'w').cone(36, 24, 'w')
+    .p('g', '0:13,32 .25:13,30 .3:14,29.5 .5:13,32', 'K', 'k1').p('g', '0:87,32 .25:87,34 .3:87,37 .5:87,32', 'K', 'k2')
+    .p('r', '0:26,54 .22:58,42 .3:62,42 .42:84,34 .95:30,58', '', 's1').p('b', '0:74,10 .22:42,22 .3:38,22 .42:17,26 .95:70,8', '', 's2')
+    .b('0@s1 .22@s1 .3:91,31 .42:91,31 .43@s1 1@s1').b('0@s2 .22@s2 .3:16,30 .4@s2 1@s2')
+    .text(50, 4.4, [[0, 'Dribble past the cone…'], [.24, 'Shoot!', '#FFC300'], [.32, 'Goal! … and a save!', '#8CFF7A'], [.45, 'Collect and swap lines']], 3.4)
+});
+
+D({ id: 'passturnshoot', name: 'Receive, Turn and Shoot', role: 's', focus: ['shooting', 'turning', 'firsttouch'], int: 2, dur: [6, 12], min: 3, max: 8, cones: [4, 0],
+  setup: ['A goal with a keeper. Two cones 12 big steps out for the shooters, back to goal.', 'Coach (or a player) stands 8 steps further back with the balls.'],
+  how: 'The coach passes in. The shooter receives with their back to goal, turns, and shoots. Two lines take turns. New keeper every few shots.',
+  pts: ['Check over your shoulder before the ball comes', 'Turn with your first touch', 'Shoot early, before the keeper is set'],
+  easy: 'Start side-on so the turn is easier.', hard: 'A defender follows the shooter in to put on pressure.',
+  anim: () => A(8).goal(90, 32, 'R', 12).cones('55,22 55,42', 'w')
+    .p('k', '0:38,32 1:38,32', 'C', 'C').face(1, 0, true)
+    .p('g', '0:87,32 .28:87,30 .32:86,30 .45:87,32 .78:87,34 .82:85.5,37 .95:87,32', 'K', 'GK')
+    .p('r', '0:60,24 .1:59,24 .18:66,26 .24:70,28 .4:60,24', '', 'P1').face(-1, 0)
+    .p('r', '0:60,40 .6:60,40 .68:66,38 .74:70,36 .9:60,40', '', 'P2').face(-1, 0)
+    .b('0@C .05@C .12@P1 .23@P1 .28:91,30 .33@GK .4@GK .48@C .55@C .62@P2 .73@P2 .78:86,37 .8@GK .9@GK .97@C')
+    .text(50, 6, [[0, ''], [.12, 'Receive and turn…'], [.24, 'Shoot!', '#FFC300'], [.4, ''], [.62, 'Receive and turn…'], [.74, 'Shoot!', '#FFC300'], [.86, '']])
+});
+
+D({ id: 'anygoal', name: 'Score in Any Goal', role: 's w', focus: ['shooting', 'dribbling', 'passing'], int: 2, dur: [5, 10], min: 4, max: 14, cones: [4, 1],
+  setup: ['Mark a box about 25 × 20 big steps.', 'Set out {half} cone goals (2 cones, 3 steps apart) around the inside.', 'Everyone has a ball.'],
+  how: 'Dribble and pass your ball through any goal, run through to collect it, and head for a different goal. How many goals in 1 minute?',
+  pts: ['Pick a goal nobody is near', 'Side-foot pass, aim for the middle', 'Collect it fast and go again'],
+  easy: 'Bigger goals.', hard: 'Must shoot from outside a 3-step "no-go" zone; weaker foot only.',
+  anim: () => A(8).area(10, 6, 80, 52).corners(10, 6, 80, 52).gate(70, 20).gate(30, 44).gate(50, 14, false, 6).gate(55, 48, false, 6)
+    .p('r', '0:40,24 .14:61,20 .22:73,20 .4:39,44 .48:27,44 1:40,24', '', 'a').b('0@a .14@a .2:76,20 .22@a .4@a .46:24,44 .48@a 1@a')
+    .p('b', '0:58,34 .14:51,21 .22:50,10 .4:56,40 .48:55,52 1:58,34', '', 'b').b('0@b .14@b .2:50,8 .22@b .4@b .46:55,55 .48@b 1@b')
+    .p('y', '0:24,20 .2:40,30 .4:50,40 .6:66,36 .8:44,22', '', 'c').b('0@c 1@c')
+    .text(50, 4.4, 'Pass through any goal, collect, go again', 3.2)
+});
+
+D({ id: 'rebound', name: 'Rebound Rush', role: 's', focus: ['shooting', 'speed', 'gk'], int: 3, dur: [6, 10], min: 3, max: 8, cones: [4, 0],
+  setup: ['A goal with a keeper.', 'Two shooting cones about 12 big steps out, one each side. Shooters line up behind them, a ball each.'],
+  how: 'Shoot, then sprint in to follow up. If the keeper saves it, put the rebound away! Collect your ball and join the other line.',
+  pts: ['Shoot low: keepers find low shots hard to hold', 'Follow your shot in, every time', 'Keeper: get up fast for the second save'],
+  easy: 'Keeper only uses feet.', hard: 'A defender chases to stop the rebound.',
+  anim: () => A(8).goal(90, 32, 'R', 12).cones('60,22 60,42', 'w')
+    .p('g', '0:87,32 .15:86,31 .2:86,33 .3:87,32 .65:86,33 .7:86,31 .8:87,32', 'K')
+    .p('r', '0:52,24 .14:64,28 .2:73,30 .26:80,34 .32:80,34 .4:86,32 .85:52,24', '', 'p')
+    .b('0@p .14@p .18:86,31 .22:82,35 .26@p .28@p .31:91,33 .4:91,33 .41@p .85@p')
+    .p('r', '0:52,40 .14:64,36 .2:73,34 .26:80,30 .32:80,30 .4:86,32 .85:52,40', '', 'q').ph(.5)
+    .b('0@q .14@q .18:86,33 .22:82,29 .26@q .28@q .31:91,31 .4:91,31 .41@q .85@q', .5)
+    .text(50, 6, [[0, ''], [.15, 'Shot… saved!'], [.24, 'Follow in and finish!', '#FFC300'], [.4, ''], [.65, 'Shot… saved!'], [.74, 'Follow in and finish!', '#FFC300'], [.9, '']])
+});
+
+D({ id: 'gateshoot', name: 'Through the Gate and Shoot', role: 's', focus: ['shooting', 'dribbling', 'running'], int: 2, dur: [6, 10], min: 3, max: 8, cones: [6, 0],
+  setup: ['A goal with a keeper.', 'Two lines about 20 big steps out, a ball each. A little gate halfway in front of each line.'],
+  how: 'Dribble fast through your gate, then shoot before the shooting line. Collect your ball, dribble back on the outside, and join the other line.',
+  pts: ['Big touches before the gate, small touches through it', 'Look up at the goal before you shoot', 'Strike through the middle of the ball'],
+  easy: 'No keeper; or move the gate closer.', hard: 'Coach calls "left" or "right" foot as you exit the gate.',
+  anim: () => A(8).goal(90, 32, 'R', 12).gate(50, 20).gate(50, 44).line(68, 10, 68, 54)
+    .p('g', '0:87,32 .3:87,29 .35:87,32 .8:87,35 .85:87,32', 'K')
+    .p('r', '0:28,20 .14:46,20 .2:56,21 .26:63,24 .3:64,25 .42:86,30 .85:28,20', '', 'p')
+    .b('0@p .26@p .32:91,29 .42:91,29 .43@p .85@p')
+    .p('b', '0:28,44 .14:46,44 .2:56,43 .26:63,40 .3:64,39 .42:86,34 .85:28,44', '', 'q').ph(.5)
+    .b('0@q .26@q .32:91,35 .42:91,35 .43@q .85@q', .5)
+    .text(50, 6, [[0, 'Through the gate…'], [.26, 'Shoot!', '#FFC300'], [.5, 'Through the gate…'], [.76, 'Shoot!', '#FFC300']])
+});
+
+D({ id: 'chooseshot', name: 'Choose Your Shot', role: 's', focus: ['shooting', 'dribbling', 'bothfeet'], int: 2, dur: [6, 10], min: 3, max: 8, cones: [8, 0],
+  setup: ['A goal with a keeper.', 'Mark two zones with cones: a far zone (15–20 steps out) worth 3 points and a near zone (8–12 steps) worth 1.', 'Shooters start 25 steps out, a ball each.'],
+  how: 'Dribble in and pick your zone. A goal from the far zone is 3 points, from the near zone 1 point. Keep your own score.',
+  pts: ['Long shot: laces, toe down, lean over the ball', 'Close in: side-foot into a corner', 'Pick quickly; don\'t stop dead'],
+  easy: 'Far zone closer in.', hard: 'Far-zone shots must be first time after a pass from the coach.',
+  anim: () => A(8).goal(90, 32, 'R', 12).zone(42, 8, 12, 48, 'rgba(255,195,0,.16)', '3 points').zone(62, 8, 12, 48, 'rgba(255,255,255,.14)', '1 point')
+    .p('g', '0:87,32 .2:87,30 .26:87,28 .4:87,32 .72:87,34 .77:86,36 .9:87,32', 'K')
+    .p('r', '0:24,22 .14:44,26 .18:47,27 .4:86,30 .85:24,22', '', 'p').b('0@p .18@p .26:91,31 .4:91,31 .41@p .85@p')
+    .p('b', '0:24,42 .2:62,38 .24:66,36 .4:86,34 .85:24,42', '', 'q').ph(.5).b('0@q .24@q .28:91,35 .4:91,35 .41@q .85@q', .5)
+    .text(50, 4.6, [[0, ''], [.2, 'From far: 3 points!', '#FFC300'], [.38, ''], [.74, 'Close in: 1 point'], [.88, '']], 3.4)
+});
+
+D({ id: 'layoff', name: 'Lay-off and Finish', role: 's', focus: ['shooting', 'passing', 'firsttouch'], int: 2, dur: [6, 10], min: 3, max: 8, cones: [4, 0],
+  setup: ['A goal with a keeper. The coach stands at the edge of the box, 12 big steps out, as a wall.', 'Two lines 10 steps behind the coach, a ball each.'],
+  how: 'Pass into the coach and keep running. The coach lays it back into your path and you shoot first time. Collect your ball and join the other line.',
+  pts: ['Firm pass into the coach', 'Run onto it; don\'t wait for it', 'Strike it first time, low'],
+  easy: 'Take a touch before shooting.', hard: 'Must finish with the foot the coach calls.',
+  anim: () => A(8).goal(90, 32, 'R', 12).cones('40,22 40,42', 'w')
+    .p('k', '0:66,32 1:66,32', 'C', 'C').face(-1, 0, true)
+    .p('g', '0:87,32 .28:87,30 .35:87,32 .78:87,34 .85:87,32', 'K')
+    .p('r', '0:40,24 .1:42,24 .22:58,29 .26:60,30 .45:86,30 .95:40,24', '', 'p').face(1, 0)
+    .b('0@p .08@p .15@C .19@C .25@p .26@p .3:91,29 .45:91,29 .46@p 1@p')
+    .p('b', '0:40,40 .1:42,40 .22:58,35 .26:60,34 .45:86,34 .95:40,40', '', 'q').face(1, 0).ph(.5)
+    .b('0@q .08@q .15@C .19@C .25@q .26@q .3:91,35 .45:91,35 .46@q 1@q', .5)
+    .text(50, 6, [[0, 'Pass into the coach…'], [.19, 'Lay-off…'], [.26, 'Shoot first time!', '#FFC300'], [.5, 'Pass into the coach…'], [.69, 'Lay-off…'], [.76, 'Shoot first time!', '#FFC300']])
+});
+
+/* ---------------- 1v1 AND DEFENDING ---------------- */
+D({ id: 'race1v1', name: '1v1 Race to Goal', role: 's', focus: ['1v1', 'shooting', 'speed'], int: 3, dur: [6, 10], min: 4, max: 10, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['A goal (keeper optional). Two start cones 20 big steps out, 6 steps apart: reds at one, blues at the other.', 'Coach stands to the side with the balls.'],
+  how: 'Coach rolls a ball into the middle. The first red and first blue race for it. Whoever wins it attacks the goal; the other defends. Next pair goes as soon as there\'s a shot.',
+  pts: ['React to the coach, first step fast', 'Get your body between the defender and the ball', 'Shoot early if you\'re clear'],
+  easy: 'Coach rolls it closer to one player.', hard: 'Coach rolls it slowly to make it a real 50-50.',
+  anim: () => A(8).goal(90, 32, 'R', 12).cones('28,22 28,42', 'w')
+    .p('k', '0:50,58 1:50,58', 'C', 'C').face(0, -1, true)
+    .p('r', '0:28,22 .25:50,30 .38:70,30 .5:46,20 .6:28,22 .7:47,30 .8:64,32 1:28,22', '', 'R')
+    .p('b', '0:28,42 .25:46,36 .38:64,34 .48:46,44 .6:28,42 .7:50,34 .8:68,34 1:28,42', '', 'B')
+    .b('0@C .03@C .2:52,32 .25@R .36@R .41:91,30 .48:91,30 .58@C .6@C .68:52,33 .71@B .8@B .85:91,34 .9:91,34 .99@C')
+    .text(50, 6, [[0, 'Coach rolls it… race!'], [.36, 'Shoot!', '#FFC300'], [.5, 'Next pair'], [.8, 'Shoot!', '#FFC300'], [.95, '']])
+});
+
+D({ id: 'line1v1', name: '1v1: Stop It on the Line', role: 's', focus: ['1v1', 'dribbling', 'defending'], int: 3, dur: [6, 10], min: 2, max: 12, ball: 'half', cones: [0, 2], bibs: 'team',
+  setup: ['Make one channel per pair, about 15 × 8 big steps, with 4 cones.', 'One ball per pair. Attacker starts at one end, defender at the other.'],
+  how: 'The defender passes to the attacker and closes them down. The attacker scores by stopping the ball on the defender\'s end line. Then swap and go the other way.',
+  pts: ['Attack the defender with speed', 'Fake one way, go the other', 'Sole on the ball on the line to score'],
+  easy: 'Defender must start from their line and walk.', hard: 'Defender can score by stopping it on the attacker\'s line.',
+  anim: () => {
+    const a = A(7);
+    [[15, 6, 70, 15], [15, 25, 70, 15], [15, 44, 70, 15]].forEach((bx, i) => {
+      a.corners(...bx, 'y').duel({ box: bx, finish: 'line', fake: i % 2 ? -1 : 1, pre: 'd' + i, ph: i * .12 });
+    });
+    return a;
+  }
+});
+
+D({ id: 'twogates1v1', name: '1v1 Two Gates', role: 's', focus: ['1v1', 'dribbling', 'turning'], int: 3, dur: [6, 10], min: 2, max: 12, ball: 'half', cones: [8, 0], bibs: 'team',
+  setup: ['Mark a box about 15 × 12 big steps per pair.', 'Put 2 little gates on each end line, one near each corner.', 'One ball per pair.'],
+  how: 'Attacker scores by dribbling through either gate on the far end. The defender can only protect one gate at a time, so fake to one and go to the other.',
+  pts: ['Look at both gates: which is open?', 'Fake with your body and eyes', 'Change of speed after the fake'],
+  easy: 'Bigger gates.', hard: 'After scoring, the attacker must turn and get back through a gate at the start end.',
+  anim: () => A(7).corners(15, 6, 70, 24, 'w').corners(15, 34, 70, 24, 'w')
+    .duel({ box: [15, 6, 70, 24], finish: 'gate', fake: 1, pre: 'u', gates: true })
+    .duel({ box: [15, 34, 70, 24], finish: 'gate', fake: -1, pre: 'v', gates: true, ph: .5 })
+});
+
+D({ id: 'shield', name: 'Shield the Treasure', role: 's w', focus: ['possession', 'dribbling', 'defending'], int: 2, dur: [5, 9], min: 4, max: 14, ball: 'half', cones: [6, 0], bibs: 'few',
+  setup: ['Mark a circle of cones about 15 big steps across.', 'Half the players have a ball ("treasure"); the other half are pirates (bibs).'],
+  how: 'Pirates try to steal a ball. Keep your body between the pirate and your ball. Lose it? You become a pirate. 1-minute rounds, then swap.',
+  pts: ['Sideways on, arm out (no pushing)', 'Ball on the foot furthest from the pirate', 'Little touches, keep turning away'],
+  easy: 'Pirates can only steal with their weaker foot.', hard: 'Shielders must also dribble to touch a cone.',
+  anim: () => {
+    const a = A(8);
+    for (let i = 0; i < 10; i++) { const g = i / 10 * Math.PI * 2; a.cone(50 + 34 * Math.cos(g), 32 + 26 * Math.sin(g), 'y'); }
+    [[36, 22, 0], [62, 24, 2], [48, 44, 4]].forEach(([cx, cy, ph], i) => {
+      const me = t => [cx + 3 * Math.sin(2 * Math.PI * t + ph), cy + 3 * Math.cos(2 * Math.PI * t + ph)];
+      const pir = t => { const g = 2 * Math.PI * 2 * t + ph, m = me(t); return [m[0] + 6 * Math.cos(g), m[1] + 6 * Math.sin(g)]; };
+      a.p('r', me).p('y', pir, 'P');
+      a.b(t => { const m = me(t), p = pir(t), dx = m[0] - p[0], dy = m[1] - p[1], L = Math.hypot(dx, dy) || 1; return [m[0] + 2.8 * dx / L, m[1] + 2.8 * dy / L]; });
+    });
+    return a.text(50, 4, 'Body between the pirate and your ball', 3.2);
+  }
+});
+
+D({ id: 'shadow', name: 'Show Them the Line', role: 's', focus: ['defending', '1v1', 'speed'], int: 2, dur: [6, 10], min: 2, max: 12, ball: 'half', cones: [4, 1], bibs: 'team',
+  setup: ['Make a channel about 20 × 10 big steps per pair, with a 2-cone gate in the middle of each end.', 'One ball per pair: attacker at one end, defender at the other.'],
+  how: 'The attacker tries to dribble through the far gate. The defender gets close, stands side-on and steers them towards the sideline, then wins the ball. Swap every go.',
+  pts: ['Get close fast, then slow down', 'Side-on, knees bent, on your toes', 'Wait for a heavy touch, then pounce'],
+  easy: 'Attacker walks with the ball.', hard: 'Defender scores by dribbling through the attacker\'s gate after winning it.',
+  anim: () => {
+    const a = A(8);
+    [[12, 6, 76, 24], [12, 34, 76, 24]].forEach(([x, y, w, h], i) => {
+      const cy = y + h / 2, P = (fx, fy) => [x + fx * w, cy + fy];
+      a.corners(x, y, w, h, 'w').gate(x, cy).gate(x + w, cy);
+      const At = [[0, .1, 0], [.15, .36, 0], [.25, .48, 3], [.35, .6, 7]], Dt = [[0, .75, 0], [.15, .56, -1], [.25, .54, 1], [.35, .58, 4], [.4, .6, 6], [.5, .9, 0]];
+      const mir = pts => pts.map(([t, fx, fy]) => [t + .5, 1 - fx, -fy]);
+      const kk = pts => pts.map(([t, fx, fy]) => K(t, ...P(fx, fy))).join(' ');
+      a.p('r', kk(At.concat([[.5, .25, 0]])) + ' ' + kk(mir(Dt)), '', 'a' + i).ph(i * .25);
+      a.p('b', kk(Dt) + ' ' + kk(mir(At.concat([[.5, .25, 0]]))), '', 'd' + i).ph(i * .25);
+      a.b(`0@a${i} .35@a${i} .39@d${i} .85@d${i} .89@a${i}`, i * .25);
+    });
+    return a.text(50, 33.3, [[0, 'Side-on: show them the line'], [.38, 'Won it!', '#8CFF7A'], [.5, 'Swap roles'], [.88, 'Won it!', '#8CFF7A']], 3.2);
+  }
+});
+
+D({ id: 'castle', name: 'Defend the Castle', role: 's', focus: ['defending', 'passing', 'shooting'], int: 2, dur: [6, 10], min: 5, max: 9, ball: 1, cones: [9, 0], bibs: 'few',
+  setup: ['Make a circle of cones about 15 big steps across; stand a tall cone ("castle") in the middle.', 'One guard (bib) inside protects the castle. Everyone else on the circle. One ball.'],
+  how: 'Players on the circle pass to find a gap and knock the castle over. The guard blocks. Whoever knocks it down is the new guard.',
+  pts: ['Pass quickly round the circle to move the guard', 'Shoot when the guard is on the wrong side', 'Guard: stay between the ball and the castle'],
+  easy: 'Bigger castle (two cones).', hard: 'Two guards; or one-touch passes only.',
+  anim: () => {
+    const a = A(9).cone(50, 32, 'w');
+    for (let i = 0; i < 10; i++) { const g = i / 10 * Math.PI * 2; a.cone(50 + 28 * Math.cos(g), 32 + 25 * Math.sin(g), 'y'); }
+    const A5 = [[50, 12], [70.9, 25.8], [62.9, 48.2], [37.1, 48.2], [29.1, 25.8]];
+    A5.forEach(([x, y], i) => a.p('r', `0:${x},${y} 1:${x},${y}`, '', 'c' + i).face((50 - x) / 25, (32 - y) / 25, true));
+    return a.p('y', '0:50,27 .16:55,30 .32:46,36 .48:54,36 .64:47,30 .7:53,27 .8:47,31 .96:50,27', 'G', 'G')
+      .b('0@c0 .02@c0 .1@c1 .16@c1 .26@c3 .32@c3 .42@c2 .48@c2 .58@c4 .64@c4 .72:49,31.5 .8@G .88@G .96@c0')
+      .text(50, 5.2, [[0, 'Pass round, move the guard'], [.72, 'Castle down! New guard', '#FFC300'], [.92, 'Pass round, move the guard']], 3.4);
+  }
+});
+
+D({ id: 'twovone', name: '2v1 Breakout', role: 's', focus: ['1v1', 'passing', 'teamwork'], int: 3, dur: [6, 10], min: 3, max: 9, ball: 'third', cones: [6, 0], bibs: 'team',
+  setup: ['Make a box about 20 × 12 big steps with a small goal (or cone goal) at one end.', 'Groups of 3: two attackers with a ball, one defender in front of the goal.'],
+  how: 'The two attackers try to score. Draw the defender towards you, then pass to your teammate, or go past if the defender covers the pass. Rotate so everyone defends.',
+  pts: ['Dribble straight at the defender', 'Pass when the defender commits to you', 'Teammate: stay wide and level, call for it'],
+  easy: 'Defender starts on the goal line.', hard: 'Defender scores by dribbling back over the start line.',
+  anim: () => A(9).goal(89, 18, 'R', 7).goal(89, 46, 'R', 7).corners(12, 6, 77, 24, 'w').corners(12, 34, 77, 24, 'w')
+    .p('r', '0:16,12 .18:40,15 .24:46,16 .45:30,10 .9:16,12', '', 'r1')
+    .p('r', '0:16,24 .18:38,26 .27:52,25 .34:66,21 .38:70,20 .9:16,24', '', 'r2')
+    .p('b', '0:76,18 .18:58,17 .24:52,17 .3:56,22 .38:72,20 .5:84,18 .55:86,18 .9:76,18', '', 'd')
+    .b('0@r1 .24@r1 .29@r2 .34@r2 .39:90,18 .5:90,18 .55@d .9@d')
+    .p('r', '0:16,40 .18:40,44 .26:52,44 .32:62,48 .36:70,47 .9:16,40', '', 'r3').ph(.5)
+    .p('r', '0:16,52 .2:38,54 .3:52,54 .9:16,52', '', 'r4').ph(.5)
+    .p('b', '0:76,46 .18:56,48 .24:52,51 .3:56,49 .4:72,46 .5:84,46 .55:86,46 .9:76,46', '', 'd2').ph(.5)
+    .b('0@r3 .32@r3 .37:90,46 .5:90,46 .55@d2 .9@d2', .5)
+    .text(50, 32.8, [[0, '2v1: draw the defender…'], [.25, '…then pass and score!', '#FFC300'], [.5, 'Defender covers the pass…'], [.8, '…so go past and score!', '#FFC300']], 3.2)
+});
+
+D({ id: 'bacon', name: 'Steal the Bacon', role: 's g', focus: ['speed', '1v1', 'dribbling'], int: 3, dur: [6, 10], min: 6, max: 12, ball: 1, cones: [6, 0], bibs: 'team',
+  setup: ['Two teams on lines 20 big steps apart, facing each other. Number each team 1, 2, 3…', 'A ball in the middle.'],
+  how: 'Coach calls a number: those two race to the ball. Whoever gets it tries to dribble back over their own line; the other tries to win it. Call two or three numbers at once so more play.',
+  pts: ['First step quick, stay low', 'Get to the ball and turn away from the defender', 'If you lose the race, defend straight away'],
+  easy: 'Call the number, then count "3, 2, 1, go".', hard: 'Score by dribbling over the other team\'s line instead.',
+  anim: () => {
+    const a = A(9).cones('18,8 18,56 82,8 82,56', 'w').line(18, 8, 18, 56).line(82, 8, 82, 56);
+    [16, 24, 32, 40, 48].forEach((y, i) => {
+      if (i !== 2 && i !== 0) { a.p('r', `0:16,${y} 1:16,${y}`, String(i + 1)); a.p('b', `0:84,${y} 1:84,${y}`, String(i + 1)); }
+    });
+    return a.p('r', '0:16,32 .2:47,32 .4:15,31 .5:16,32', '3', 'r3').p('b', '0:84,32 .2:54,32 .4:24,33 .62:84,32', '3', 'b3')
+      .p('r', '0:16,16 .5:16,16 .68:46,30 .82:76,22 1:16,16', '1', 'r1').p('b', '0:84,16 .5:84,16 .68:53,30 .82:85,18 1:84,16', '1', 'b1')
+      .b('0:50,32 .19:50,32 .21@r3 .4@r3 .44:22,32 .5:50,32 .66:50,32 .68@b1 .82@b1 .86:80,20 1:50,32')
+      .text(50, 5, [[0, '"Number 3!"', '#FFC300'], [.4, 'Over the line: a point!'], [.5, '"Number 1!"', '#FFC300'], [.84, 'A point to blue!']]);
+  }
+});
+
+D({ id: 'recovery', name: 'Chase and Tackle', role: 's', focus: ['defending', 'speed', 'running'], int: 3, dur: [5, 9], min: 2, max: 12, ball: 'half', cones: [0, 2], bibs: 'team',
+  setup: ['Make lanes about 20 big steps long with a cone goal at the far end.', 'The attacker starts with a ball 2 steps ahead of the defender.'],
+  how: 'On "Go!" the attacker dribbles to score in the far goal. The defender chases to get goal-side and win the ball. Swap roles each go.',
+  pts: ['Defender: sprint to get in front, not behind', 'Tackle with the inside of the foot, on your toes', 'Attacker: push it ahead and run'],
+  easy: 'Defender starts 4 steps behind.', hard: 'Defender starts level but must touch a cone first.',
+  anim: () => A(8).gate(88, 18).gate(88, 46).cones('20,18 14,22 20,46 14,50', 'w')
+    .p('r', '0:20,18 .28:64,18 .32:68,19 .5:40,22 .9:20,18', '', 'A').p('b', '0:14,22 .06:14,22 .28:62,20 .32:66,18.5 .45:76,18 .9:14,22', '', 'Dd')
+    .b('0@A .29@A .33@Dd .9@Dd')
+    .p('r', '0:20,46 .32:76,46 .38:84,46 .9:20,46', '', 'A2').ph(.5).p('b', '0:14,50 .06:14,50 .32:70,49 .4:76,48 .9:14,50', '', 'D2').ph(.5)
+    .b('0@A2 .33@A2 .38:91,46 .42:91,46 .44@A2 .9@A2', .5)
+    .text(50, 5.5, [[0, '"Go!" Defender, catch them!'], [.32, 'Tackle!', '#8CFF7A'], [.5, '"Go!"'], [.86, 'Too late, goal!', '#FFC300']])
+});
+
+/* ---------------- GOALKEEPING ---------------- */
+D({ id: 'hothands', name: 'Hot Hands', role: 's w', focus: ['gk', 'agility', 'speed'], int: 1, dur: [5, 9], min: 2, max: 14, ball: 'half', cones: [0, 1],
+  setup: ['Pairs about 5 big steps apart, one ball per pair.', 'One is the keeper, one is the feeder. Swap every minute.'],
+  how: 'The feeder rolls, then throws at chest height, then above the head, a little to either side. The keeper gets behind the ball, catches it with "W" hands and throws it back.',
+  pts: ['Ready position: feet apart, hands up, on your toes', 'Thumbs together in a W for high balls', 'Scoop rollers up with both hands'],
+  easy: 'Straight at the keeper, gentle.', hard: 'Feeder calls "Ground!" or "Air!" late.',
+  anim: () => {
+    const a = A(9).area(20, 8, 60, 48);
+    [16, 32, 48].forEach((y, i) => {
+      a.p('r', `0:38,${y} 1:38,${y}`, '', 'T' + i).face(1, 0, true);
+      a.p('g', `0:62,${y} .08:62,${y - 3} .2:62,${y - 3} .35:62,${y} .48:62,${y + 3} .6:62,${y + 3} .8:62,${y} .88:62,${y - 2}`, 'K', 'K' + i).face(-1, 0, true);
+      a.b(`0@T${i} .02@T${i} .1@K${i} .2@K${i} .3@T${i}^ .4@T${i} .5@K${i}^ .6@K${i} .7@T${i} .8@T${i} .9@K${i}^`, i * .05);
+    });
+    return a.text(50, 5.5, [[0, 'Roll: scoop it up'], [.4, 'Chest height: W hands', '#FFC300'], [.8, 'High: catch above your head']], 3.4);
+  }
+});
+
+D({ id: 'gkwars', name: 'Keeper Wars', role: 's', focus: ['gk', 'agility', 'teamwork'], int: 2, dur: [5, 9], min: 2, max: 12, ball: 'half', cones: [0, 2],
+  setup: ['Pairs: each keeper has a cone goal 5 big steps wide.', 'The goals face each other, about 10 big steps apart. One ball per pair.'],
+  how: 'Keepers take turns to throw or roll the ball to score in the other goal. Save it and it\'s your turn. First to 5 goals.',
+  pts: ['Ready position before every throw', 'Dive sideways, not backwards', 'Throw low and to the corners'],
+  easy: 'Rolls only.', hard: 'Must throw from where you made the save.',
+  anim: () => A(8).cones('25,20 25,44 75,20 75,44', 'y')
+    .p('r', '0:27,32 .4:27,32 .45:26,37 .5:24,40 .58:22,40 .65:27,32', 'K', 'K1').face(1, 0, true)
+    .p('b', '0:73,32 .1:73,27 .15:73,26 .3:73,30 .4:73,32 .7:73,32 .78:73,35 .9:73,32', 'K', 'K2').face(-1, 0, true)
+    .b('0@K1 .08@K1 .16@K2^ .3@K2 .45:19,40 .55:19,40 .57@K1 .7@K1 .78@K2^ .92@K2')
+    .text(50, 7, [[0, ''], [.16, 'Save!', '#8CFF7A'], [.3, ''], [.45, 'Goal!', '#FFC300'], [.6, ''], [.78, 'Save!', '#8CFF7A'], [.9, '']])
+});
+
+D({ id: 'shotstop', name: 'Shot Stopper Pairs', role: 's', focus: ['gk', 'shooting', 'passing'], int: 2, dur: [5, 9], min: 2, max: 12, ball: 'half', cones: [0, 1.5],
+  setup: ['Pairs: one keeper in a cone goal (4 big steps wide), one shooter 8 steps away.', 'One ball per pair. Swap after 6 shots.'],
+  how: 'The shooter side-foots at the goal, aiming low for the corners. The keeper shuffles to get their body behind the ball and saves with hands or feet, then rolls it back.',
+  pts: ['Keeper: set your feet as the shooter strikes', 'Get your body behind the ball', 'Shooter: low and to the corners'],
+  easy: 'Shooter passes rather than shoots.', hard: 'Shooter takes one touch to the side before shooting.',
+  anim: () => {
+    const a = A(8).area(15, 6, 70, 52);
+    [16, 32, 48].forEach((y, i) => {
+      a.cones(`70,${y - 5} 70,${y + 5}`, 'y');
+      a.p('r', `0:36,${y} 1:36,${y}`, '', 'S' + i).face(1, 0, true);
+      a.p('g', `0:69,${y} .1:69,${y - 3} .2:69,${y - 3} .3:69,${y} .5:69,${y + 3} .6:69,${y + 3} .7:69,${y}`, 'K', 'K' + i).face(-1, 0, true);
+      a.b(`0@S${i} .04@S${i} .1@K${i} .2@K${i} .3@S${i} .44@S${i} .5@K${i} .6@K${i} .7@S${i}`, i * .06);
+    });
+    return a.text(50, 4.4, [[0, 'Low to the corner…'], [.1, 'Set, shuffle, save!', '#8CFF7A'], [.3, 'Roll it back']], 3.4);
+  }
+});
+
+/* ---------------- AGILITY AND SPEED ---------------- */
+D({ id: 'agility', name: 'Agility Course', role: 's w', focus: ['agility', 'speed', 'dribbling'], int: 2, dur: [5, 10], min: 2, max: 10, ball: 'half', cones: [16, 0],
+  setup: ['Make a course: 4 zig-zag cones, a row of 4 flat cones to hop over, 2 cones for a side-step, and a ball pile at the end.', 'Players start one after another, 3 seconds apart.'],
+  how: 'Zig-zag round the cones, hop over the row, side-step, then dribble a ball round the end cone and leave it on the pile. Jog back and go again.',
+  pts: ['Small quick steps round the cones', 'Land softly on the balls of your feet', 'Side-step: don\'t cross your feet'],
+  easy: 'Walk the hops; take out the side-step.', hard: 'Time it: beat your best.',
+  anim: () => {
+    const a = A(9).cones('24,40 32,50 40,40 48,50', 'y').cones('60,44 64,44 68,44 72,44', 'w').cones('76,40 76,22', 'b').cone(60, 8, 'r').cone(14, 46, 'w');
+    const k = '0:14,46 .06:22,38 .12:32,52 .18:40,38 .24:48,52 .3:56,44 .33:60,44 .36:60,44 .38:64,44 .41:64,44 .43:68,44 .46:68,44 .48:73,44 .52:76,40 .6:76,22 .62:72,16 .75:56,10 .82:62,6 .88:73,14 1:14,46';
+    a.p('r', k, '', 'p').b('0:73,14 .62:73,14 .63@p .87@p .89:73,14 1:73,14');
+    a.p('b', k, '', 'q').ph(.5).b('0:74,16 .62:74,16 .63@q .87@q .89:74,16 1:74,16', .5);
+    return a.text(50, 60.5, [[0, 'Zig-zag'], [.3, 'Hop, hop, hop'], [.48, 'Side-step'], [.62, 'Dribble round and back']], 3.4);
+  }
+});
+
+D({ id: 'reaction', name: 'Colour Race', role: 's w', focus: ['speed', 'dribbling', 'turning'], int: 3, dur: [5, 8], min: 2, max: 16, cones: [4, 0],
+  setup: ['Pairs side by side in the middle, a ball each.', 'A red gate 10 big steps to one side, a blue gate 10 steps to the other.'],
+  how: 'Coach shouts a colour: dribble to that gate as fast as you can and stop the ball on the line. First one there wins. Back to the middle and go again.',
+  pts: ['React fast: first step is everything', 'Turn with the ball, don\'t run round it', 'Stop it on the line with your sole'],
+  easy: 'Coach points as well as shouts.', hard: 'Shout the opposite colour to the one you mean!',
+  anim: () => {
+    const a = A(8).gate(20, 32, true, 44, 'r').gate(80, 32, true, 44, 'b').line(20, 10, 20, 54).line(80, 10, 80, 54);
+    [16, 32, 48].forEach((y, i) => {
+      a.p('r', `0:50,${y - 3} .1:50,${y - 3} .28:77,${y - 3} .5:50,${y - 3} .55:50,${y - 3} .73:23,${y - 3}`, '', 'a' + i).b(`0@a${i} 1@a${i}`);
+      a.p('b', `0:50,${y + 3} .12:50,${y + 3} .32:77,${y + 3} .5:50,${y + 3} .57:50,${y + 3} .76:23,${y + 3}`, '', 'b' + i).b(`0@b${i} 1@b${i}`);
+    });
+    return a.text(50, 5.5, [[0, 'Ready…'], [.08, '"BLUE!"', '#4CC9F0'], [.42, 'Back to the middle'], [.53, '"RED!"', '#FF4D6D'], [.9, 'Back to the middle']]);
+  }
+});
+
+D({ id: 'rps', name: 'Rock, Paper, Scissors Chase', role: 'w s', focus: ['speed', 'agility'], int: 3, dur: [4, 8], min: 2, max: 24, ball: 0, cones: [4, 0],
+  setup: ['Mark a middle line and two safe lines, each about 10 big steps from the middle.', 'Players in pairs, facing each other across the middle line.'],
+  how: 'Pairs play rock, paper, scissors. The winner chases the loser back to the loser\'s safe line. Tag them before the line for a point. Find a new partner.',
+  pts: ['Ready position: on your toes', 'Turn and sprint, don\'t look back', 'Chaser: short fast steps to start'],
+  easy: 'Walk-chase.', hard: 'Do it with a ball each: dribble while you chase.',
+  anim: () => A(8).line(50, 8, 50, 56).line(14, 8, 14, 56).line(86, 8, 86, 56).zone(8, 8, 6, 48).zone(86, 8, 6, 48)
+    .p('r', '0:46,16 .25:46,16 .45:76,16 .9:46,16').p('b', '0:54,16 .25:54,16 .43:84,16 .9:54,16')
+    .p('r', '0:46,32 .25:46,32 .43:16,32 .9:46,32').p('b', '0:54,32 .25:54,32 .45:24,32 .9:54,32')
+    .p('r', '0:46,48 .25:46,48 .42:74,48 .9:46,48').p('b', '0:54,48 .25:54,48 .42:77,48 .9:54,48')
+    .text(50, 5.5, [[0, 'Rock, paper, scissors…'], [.24, 'GO! Winner chases', '#FFC300'], [.42, 'Tagged! A point', '#8CFF7A'], [.55, 'Find a new partner']])
+});
+
+/* ---------------- SMALL-SIDED GAMES ---------------- */
+D({ id: 'mini3v3', name: '3v3 Mini Goals', role: 'g s', focus: ['teamwork', 'shooting', 'passing'], int: 3, dur: [8, 25], min: 4, max: 10, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 15 big steps with a small goal (or 2 cones) at each end.', 'Teams of 2–5 ({half} a side). Spare balls behind each goal so play restarts fast.'],
+  how: 'A normal game, no keepers. Ball out? Restart with a dribble-in from the line. Swap opponents every 4 minutes.',
+  pts: ['Spread out: wide, wide and long', 'Shoot when you see the goal', 'Lose it? Win it back straight away'],
+  easy: 'Bigger goals.', hard: 'Every player on a team must touch it before a goal counts.',
+  anim: () => A(9).area(8, 8, 84, 48).goal(8, 32, 'L', 10).goal(92, 32, 'R', 10).line(50, 8, 50, 56)
+    .match({ area: [8, 8, 84, 48], n: 3 })
+});
+
+D({ id: 'fourgoals', name: 'Four-Goal Game', role: 'g s', focus: ['teamwork', 'passing', 'turning'], int: 3, dur: [8, 20], min: 4, max: 10, ball: 1, cones: [12, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 20 big steps.', 'Put 2 cone goals at each end, one near each corner.', 'Two teams. Each team attacks the 2 goals at one end.'],
+  how: 'Score in either goal you attack. If one goal is crowded, switch the ball to the other side and score there.',
+  pts: ['Look up: which goal is open?', 'Switch play with a pass across', 'Defend the goal nearest the ball'],
+  easy: 'Bigger goals.', hard: 'Goals only count after a switch of play.',
+  anim: () => A(9).area(8, 8, 84, 48).goal(92, 20, 'R', 8).goal(92, 44, 'R', 8).goal(8, 20, 'L', 8).goal(8, 44, 'L', 8)
+    .match({ area: [8, 8, 84, 48], n: 3, tA: [1, .25], tB: [0, .75] })
+    .text(50, 5.5, [[0, 'Crowded? Switch to the other goal'], [.42, 'Goal!', '#FFC300'], [.5, 'Crowded? Switch to the other goal'], [.92, 'Goal!', '#FFC300']], 3.2)
+});
+
+D({ id: 'endzone', name: 'End Zone Game', role: 'g s', focus: ['dribbling', 'teamwork', 'running'], int: 3, dur: [8, 20], min: 4, max: 10, ball: 1, cones: [8, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 15 big steps with a 3-step end zone at each end.', 'Two teams, no goals or keepers.'],
+  how: 'Score by dribbling into the end zone and stopping the ball with your sole. No shooting: you have to dribble it in.',
+  pts: ['Run at space with the ball', 'Support the dribbler so you can get a pass', 'Stop it in the zone with your sole'],
+  easy: 'A pass to a teammate in the zone also counts.', hard: 'Defenders can stand in the zone.',
+  anim: () => A(9).area(8, 8, 84, 48).zone(8, 8, 8, 48, 'rgba(255,255,255,.16)', 'ZONE').zone(84, 8, 8, 48, 'rgba(255,255,255,.16)', 'ZONE')
+    .match({ area: [8, 8, 84, 48], n: 3, tA: [.97, .55], finish: 'dribble' })
+    .text(50, 5.5, [[0, 'Dribble it into the zone'], [.44, 'Sole on it: a point!', '#FFC300'], [.5, 'Dribble it into the zone'], [.94, 'Sole on it: a point!', '#FFC300']], 3.2)
+});
+
+D({ id: 'gategame', name: 'Gates Game', role: 'g s', focus: ['passing', 'teamwork', 'possession'], int: 3, dur: [8, 20], min: 4, max: 10, ball: 1, cones: [16, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 20 big steps.', 'Scatter 6 little gates (2 cones, 3 steps apart) inside.', 'Two teams, one ball.'],
+  how: 'Score a point by passing through any gate to a teammate. You can\'t use the same gate twice in a row.',
+  pts: ['Find a gate with no defender', 'Get on the other side of a gate to receive', 'Firm pass, along the ground'],
+  easy: 'Dribbling through a gate also scores.', hard: 'Must be a one-touch pass through the gate.',
+  anim: () => {
+    const ar = [8, 8, 84, 48], X = f => 8 + f * 84, Y = f => 8 + f * 48;
+    return A(9).area(...ar).corners(...ar)
+      .gate(X(.855), Y(.44), false, 6).gate(X(.145), Y(.56), false, 6).gate(X(.35), Y(.2), true).gate(X(.62), Y(.78), true).gate(X(.5), Y(.5), false, 6).gate(X(.28), Y(.82), true)
+      .match({ area: ar, n: 3, tA: [.9, .28] })
+      .text(50, 5.5, [[0, 'Pass through a gate to a teammate'], [.44, 'Through the gate: a point!', '#FFC300'], [.5, 'Pass through a gate to a teammate'], [.94, 'A point!', '#FFC300']], 3.2);
+  }
+});
+
+D({ id: 'worldcup', name: 'World Cup', role: 'g', focus: ['teamwork', 'shooting', 'passing'], int: 3, dur: [12, 30], min: 6, max: 10, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['Mark side-by-side pitches about 20 × 12 big steps with small goals: one pitch per 2 teams.', 'Teams of 3–5; each team picks a country.', 'Games last 4 minutes; then winners move one pitch up, losers one down.'],
+  how: 'Short games, then everyone changes opponent. Keep a running score for your country. Spare balls behind every goal.',
+  pts: ['Spread out, don\'t all chase the ball', 'Shoot when you can see the goal', 'Shake hands after every game'],
+  easy: 'No moving pitches; just swap opponents.', hard: 'A goal after 3 passes counts double.',
+  anim: () => A(9).area(6, 4, 88, 26).area(6, 34, 88, 26).corners(6, 4, 88, 26).corners(6, 34, 88, 26)
+    .goal(6, 17, 'L', 7).goal(94, 17, 'R', 7).goal(6, 47, 'L', 7).goal(94, 47, 'R', 7)
+    .match({ area: [6, 4, 88, 26], n: 3, pre: 't', cA: 'g', cB: 'y' })
+    .match({ area: [6, 34, 88, 26], n: 3, pre: 'u', ph: .25 })
+    .text(50, 32.6, [[0, 'Ireland v Brazil, Spain v France'], [.85, 'Winners up a pitch, losers down', '#FFC300']], 2.8)
+});
+
+D({ id: 'twoball', name: 'Two-Ball Game', role: 'g s', focus: ['teamwork', 'speed', 'shooting'], int: 3, dur: [8, 15], min: 6, max: 10, ball: 2, cones: [4, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 18 big steps with a small goal at each end.', 'Two teams, two balls in play at once.'],
+  how: 'A normal game, but with two balls. Score with either one. Lots of touches, lots of goals, lots of noise.',
+  pts: ['Heads up: where are both balls?', 'Talk to each other: "I\'ve got this one!"', 'Get back fast when you lose one'],
+  easy: 'Bigger goals.', hard: 'Three balls!',
+  anim: () => A(9).area(8, 8, 84, 48).goal(8, 32, 'L', 10).goal(92, 32, 'R', 10)
+    .match({ area: [8, 8, 84, 48], n: 4 })
+    .b('0@b3 .2@b3 .26@b2 .36@b2 .42:4,30 .5:4,30 .56@a3 .7@a3 .76@a2 .86@a2 .92:96,34')
+    .text(50, 5.5, 'Two balls, two chances to score', 3.4)
+});
+
+D({ id: 'champions', name: 'Champions League', role: 'g', focus: ['teamwork', '1v1', 'shooting'], int: 3, dur: [12, 25], min: 4, max: 6, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['Make a row of mini-pitches about 15 × 10 big steps, one per 2 teams.', 'Teams of 2 or 3. Mini-pitch 1 is the "Champions League".', 'Spare balls behind each goal.'],
+  how: '3-minute games. Winners move one mini-pitch towards mini-pitch 1, losers move one away. Try to finish on mini-pitch 1!',
+  pts: ['2v2: one goes, one supports', 'Shoot from anywhere', 'Big cheer when you move up!'],
+  easy: 'No moving: just swap opponents.', hard: 'Winners must score from a pass, not a dribble.',
+  anim: () => A(9).area(6, 4, 88, 26).area(6, 34, 88, 26).goal(6, 17, 'L', 6).goal(94, 17, 'R', 6).goal(6, 47, 'L', 6).goal(94, 47, 'R', 6)
+    .match({ area: [6, 4, 88, 26], n: 2, pre: 't' }).match({ area: [6, 34, 88, 26], n: 2, pre: 'u', ph: .35, cA: 'y', cB: 'g' })
+    .text(50, 32.6, [[0, 'Top mini-pitch is the Champions League'], [.8, 'Winners move up a mini-pitch!', '#FFC300']], 2.8)
+});
+
+D({ id: 'keepball', name: 'Keep Ball', role: 's g', focus: ['possession', 'passing', 'teamwork'], int: 2, dur: [6, 12], min: 5, max: 8, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['Mark a box about 15 × 15 big steps.', 'Groups of 6: 4 keep the ball (no bibs), 2 try to win it (bibs). One ball.'],
+  how: 'The 4 pass and move to keep the ball. 5 passes = a point. If the 2 win it, the player who lost it swaps with one of them.',
+  pts: ['Move into space after you pass', 'Pass to the player furthest from a defender', 'Call for it: "Here!"'],
+  easy: '4v1.', hard: 'Two touches max; 3v2.',
+  anim: () => A(8).area(20, 6, 60, 52).corners(20, 6, 60, 52)
+    .p('r', '0:28,14 .25:34,24 .5:30,40 .75:40,50', '', 'k0').p('r', '0:70,16 .25:62,12 .5:72,26 .75:66,40', '', 'k1')
+    .p('r', '0:72,48 .25:68,40 .5:56,52 .75:30,46', '', 'k2').p('r', '0:30,46 .25:44,52 .5:38,22 .75:56,18', '', 'k3')
+    .p('y', '0:44,28 .2:56,22 .45:62,40 .7:44,40 .95:42,28', 'D').p('y', '0:56,38 .2:50,44 .45:46,30 .7:36,34 .95:54,38', 'D')
+    .b('0@k0 .04@k0 .12@k1 .28@k1 .36@k2 .52@k2 .6@k3 .78@k3 .86@k0')
+    .text(50, 4.4, [[0, 'Passes: 1'], [.12, 'Passes: 2'], [.36, 'Passes: 3'], [.6, 'Passes: 4'], [.86, '5 passes = a point!', '#FFC300']], 3.4)
+});
+
+D({ id: 'plusone', name: 'Plus-One Game', role: 'g s', focus: ['passing', 'teamwork', 'possession'], int: 3, dur: [8, 20], min: 4, max: 9, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 15 big steps with a small goal at each end.', 'Two teams plus one "joker" (a coach or player in a different bib) who plays for whichever team has the ball.'],
+  how: 'A normal game, but the joker always helps the team with the ball, so the attackers have an extra player. Use the joker to get free.',
+  pts: ['Pass to the joker, then move into space', 'Look for the free player', 'Defenders: stay goal-side'],
+  easy: 'The joker can\'t be tackled.', hard: 'The joker is only allowed one touch.',
+  anim: () => A(9).area(8, 8, 84, 48).goal(8, 32, 'L', 10).goal(92, 32, 'R', 10)
+    .match({ area: [8, 8, 84, 48], n: 3, joker: true })
+    .text(50, 5.5, [[0, 'The joker (+) helps whoever has the ball'], [.42, 'Goal!', '#FFC300'], [.5, 'The joker (+) helps whoever has the ball'], [.92, 'Goal!', '#FFC300']], 3.2)
+});
+
+/* ---------------- ARRIVAL OPENERS ----------------
+   role 'a': easy activities that start with whoever is there and that late
+   arrivals can walk straight into. */
+D({ id: 'growgame', name: 'Grow the Game', role: 'a', focus: ['teamwork', 'dribbling', 'shooting'], int: 2, dur: [5, 15], min: 2, max: 10, ball: 1, cones: [6, 0],
+  setup: ['Mark a small pitch about 20 × 12 big steps with a small goal (or 2 cones) at each end.', 'Keep a few spare balls beside each goal.'],
+  how: 'The first two to arrive play 1v1. Each new arrival joins the team with fewer players, so it grows to 2v2, 3v3, 4v4. When a team reaches 5, start a second pitch.',
+  pts: ['Start the moment two are there: no waiting', 'New arrivals: boots on, straight in', 'Keep it light; no need to coach yet'],
+  easy: 'A coach plays in goal for both teams.', hard: 'Goals only count with the weaker foot.',
+  anim: () => A(9).area(10, 8, 80, 44).goal(10, 30, 'L', 9).goal(90, 30, 'R', 9)
+    .p('r', '0:30,30 .15:45,26 .3:58,28 .45:50,34 .6:66,24 .8:40,30', '', 'r0')
+    .p('b', '0:70,30 .15:56,29 .3:52,31 .45:58,30 .6:72,28 .8:52,26', '', 'b0')
+    .p('r', '0:22,61 .25:22,61 .38:38,42 .55:56,40 .7:74,34 .85:48,40 .95:22,61', '', 'r1')
+    .p('b', '0:78,61 .5:78,61 .62:64,42 .75:58,36 .9:66,40 .97:78,61', '', 'b1')
+    .b('0@r0 .12@r0 .18@b0 .3@b0 .4@r1 .55@r1 .6@r0 .66@r0 .72:91,30 .78:91,30 .82@b0 .95@b0')
+    .text(50, 5.4, [[0, 'Two here? Start 1v1'], [.28, 'New arrival joins the smaller team', '#FFC300'], [.55, 'Now it\'s 2v2'], [.72, 'Goal!', '#8CFF7A'], [.8, 'Next arrival joins blue']], 3.4)
+});
+
+D({ id: 'beatcoach', name: 'Beat the Coach', role: 'a', focus: ['shooting', 'dribbling', 'gk'], int: 2, dur: [5, 15], min: 1, max: 8, ball: 'each', cones: [2, 0],
+  setup: ['A coach goes in goal (or a goal made of 2 tall cones).', 'Put a shooting cone about 10 big steps out.'],
+  how: 'Each player who arrives grabs a ball, dribbles round the cone and shoots. A goal is a point for the kids, a save is a point for the coach. Shout the score after every shot.',
+  pts: ['Dribble round the cone, head up, then shoot', 'Aim low for the corners', 'Collect your ball fast and go again'],
+  easy: 'Shoot from closer; coach on knees.', hard: 'Must shoot with the foot the coach calls.',
+  anim: () => A(8).goal(90, 32, 'R', 12).cone(62, 34, 'w')
+    .p('k', '0:88,32 .02:88,29 .1:88,32 .33:88,30 .36:88,31 .66:88,34 .7:88,32', 'C', 'C').face(-1, 0, true)
+    .p('r', '0:30,20 .2:58,28 .26:64,37 .3:66,36 .45:86,32 .9:30,20', '', 'p').b('0@p .3@p .35:91,30 .45:91,30 .46@p .9@p')
+    .p('g', '0:30,20 .2:58,28 .26:64,37 .3:66,36 .45:84,33 .9:30,20', '', 'q').ph(.33).b('0@q .3@q .35@C .43@C .48@q .9@q', .33)
+    .p('r', '0:30,46 .2:56,40 .26:64,37 .3:66,36 .45:86,32 .9:30,46', '', 'w').ph(.66).b('0@w .3@w .35:91,35 .45:91,35 .46@w .9@w', .66)
+    .text(50, 5.4, [[0, 'Save! A point to the coach', '#FFC300'], [.12, 'Goal = kids score, save = coach scores'], [.36, 'Goal! A point to the kids', '#8CFF7A'], [.48, 'Goal = kids score, save = coach scores'], [.69, 'Goal! A point to the kids', '#8CFF7A'], [.8, 'Goal = kids score, save = coach scores']], 3.2)
+});
+
+D({ id: 'keepyup', name: 'Keepy-Uppy Challenge', role: 'a', focus: ['ballmastery', 'firsttouch', 'agility'], int: 1, dur: [4, 12], min: 1, max: 20, cones: [4, 0],
+  setup: ['Any open space; mark it with 4 cones so arrivals know where to go.', 'Everyone who arrives takes a ball.'],
+  how: 'Level 1: drop the ball, kick it up once with your laces, catch it. Level 2: two kicks then catch. Level 3: one bounce allowed between kicks, as many as you can. Tell the coach your best.',
+  pts: ['Toes pointed, kick with your laces', 'Small soft kicks, not big ones', 'Eyes on the ball'],
+  easy: 'Let it bounce between every kick.', hard: 'Alternate feet; or use the thigh too.',
+  anim: () => {
+    const a = A(7).area(15, 8, 70, 48).corners(15, 8, 70, 48);
+    [[30, 22], [50, 22], [70, 22], [40, 42], [60, 42]].forEach(([x, y], i) => {
+      a.p(i % 2 ? 'g' : 'r', `0:${x},${y} 1:${x},${y}`, '', 'k' + i).face(0, -1, true);
+      a.b(`0@k${i} .15@k${i} .25:${x},${y - 5}^ .35@k${i} .45:${x},${y - 5}^ .55@k${i} .65:${x},${y - 5}^ .75@k${i}`, i * .13);
+    });
+    return a.text(50, 5.4, 'Kick it up, catch it, beat your best', 3.4);
+  }
+});
+
+/* drills that also work as arrival openers (start with 2, others join in) */
+['gates', 'figure8', 'droptrap', 'anygoal', 'footgolf', 'knockrun', 'traffic', 'bodyparts', 'colourcones', 'fourcorners', 'dribbletag'].forEach(id => DRILLS.find(d => d.id === id).role.push('a'));
+
+/* ---------------- "TALK ME THROUGH IT" ----------------
+   Plain, step-by-step version of every drill for a coach who has never seen it. */
+const WALK = {
+  traffic: ['Everyone stands in the box with a ball at their feet.', 'Shout "Green!": they dribble anywhere in the box, quickly.', 'Shout "Amber!": they slow right down and use tiny touches.', 'Shout "Red!": they stop the ball by putting a foot on top of it.', 'Keep switching every 5–10 seconds. Slow to stop? 3 toe taps, then carry on.'],
+  sharks: ['The minnows stand on one end line with a ball each. Two sharks stand in the middle with no ball.', 'Shout "Go!": minnows dribble across to the other end line.', 'Sharks try to kick the minnows\' balls out of the box.', 'Lose your ball? Fetch it, do 5 toe taps outside the box, then come back in.', 'When everyone is across, shout "Go!" to go back. New sharks every 2 crossings.'],
+  simon: ['Everyone stands in a space with a ball, facing you.', 'Show a move and say "Simon says toe taps" (tap the top of the ball with each foot in turn). They copy.', 'Change the move every 15–20 seconds: sole rolls, pull-backs, step-overs.', 'Now and then call a move without "Simon says". Anyone who does it does 3 toe taps, then carries on.'],
+  bodyparts: ['Everyone dribbles around the box.', 'Shout a body part, like "Knee!".', 'They stop the ball and touch it with that part: knee on the ball, elbow on the ball, and so on.', 'Shout "Go!" and they dribble off. Call a new body part.'],
+  gates: ['Little gates (2 cones close together) are dotted around the box.', 'Everyone has a ball. Shout "Go!" and time 45 seconds.', 'Players dribble through any gate, then find a different one, counting out loud.', 'Shout "Stop!" and ask for scores. Go again and try to beat it.'],
+  robnest: ['Four teams, one at each corner (their nest). All the balls are in the middle.', 'Shout "Go!": one player from each team runs in, dribbles one ball back to their nest and stops it.', 'Then the next player in the team goes. One ball per trip.', 'When the middle is empty, they can take balls from other teams\' nests.', 'After 60 seconds shout "Stop!" Most balls wins. Put them back in the middle and go again.'],
+  stuckmud: ['Everyone dribbles in the box. One or two taggers (bibs, no ball) chase them.', 'If a tagger touches your shoulder, you freeze: stand still, legs wide, foot on your ball.', 'A teammate saves you by passing their ball through your legs and collecting it.', 'Once saved, you dribble off again. New taggers every minute.'],
+  colourcones: ['Cones of three colours are scattered around the box. Everyone dribbles.', 'Shout a colour, like "Blue!".', 'Everyone dribbles to any blue cone and puts a foot on top of their ball beside it.', 'Shout "Go!" and they dribble again. Call a new colour.'],
+  fourcorners: ['Point to the four corners and call them 1, 2, 3 and 4.', 'Everyone dribbles around the middle.', 'Shout a number, like "3!": everyone dribbles to that corner as fast as they can.', 'Shout "Middle!" and they dribble back in. Call another number.'],
+  dribbletag: ['Everyone has a ball and dribbles in the box. One player is the tagger and wears a bib.', 'The tagger dribbles a ball too, and tries to touch another player on the shoulder.', 'If you\'re touched, you\'re the new tagger: take the bib and count to 3 before chasing.', 'Everyone keeps their own ball close the whole time; no leaving it behind to run away.'],
+  safari: ['Everyone lines up on one line of cones.', 'Shout "Bears!": they walk on hands and feet to the other line.', 'Shout "Frogs!": big frog jumps back across.', 'Then skips, crab walks (sitting, hands behind) or tiptoes. 4 or 5 quick crossings.'],
+  garden: ['Two teams, one in each half. Balls are spread out in both halves.', 'Shout "Go!": everyone kicks balls out of their half into the other team\'s half.', 'Keep going: as soon as a ball lands in your half, kick it back.', 'After 60 seconds shout "Freeze!" Count the balls in each half. Fewer balls wins.'],
+  passtag: ['One tagger has a ball and wears a bib. Everyone else runs around the box without a ball.', 'The tagger dribbles close to a runner and passes along the ground to hit their shoe.', 'If the ball hits your shoe, you take the bib and the ball: you\'re the new tagger.', 'The old tagger becomes a runner. Passes stay along the ground, never high.'],
+  mirror: ['Pairs face each other across a line. One is the leader with a ball.', 'The leader moves side to side with the ball; the partner copies, like a mirror.', 'Shout "Go!": the leader races to a side cone; the partner tries to get there first.', 'Swap leader each go.'],
+  belts: ['Everyone stands at their own cone with a ball, facing you.', 'White belt: tap the top of the ball with each foot in turn (toe taps). 30 seconds.', 'Yellow belt: roll it side to side under the sole. Green belt: pull it back with the sole, push it forward.', 'Black belt: step over the ball and go. Say "well done" to anyone who gets a belt.'],
+  slalom: ['Each pair has a lane of 4 cones in a line.', 'One partner dribbles in and out of the cones to the end.', 'At the end they turn and dribble fast back to the start, outside the cones.', 'Then the partner goes. Count how many runs the pair does in 2 minutes.'],
+  knockrun: ['Everyone starts at a cone with a ball, facing a cone 20 steps away.', 'Kick the ball a few steps ahead, run after it, kick it ahead again.', 'Stop it with your foot on top at the far cone.', 'Dribble back with little touches. Race whoever is beside you.'],
+  turnline: ['Players stand on the start line with a ball each.', 'Shout the turn, like "Drag-back!". They dribble to the far line.', 'At the line they turn with the ball (drag-back: pull it back with the sole and go the other way).', 'Dribble back to the start. Shout a new turn for the next go.'],
+  escape: ['A small square sits inside a bigger square. Each side of the big square has 2 cones of one colour.', 'Everyone dribbles inside the small square.', 'Shout a colour, like "Blue!": everyone dribbles out to the blue side, turns, and comes back in.', 'First back into the small square wins. Call another colour.'],
+  conedefender: ['Each pair has a lane: start cone, a tall cone in the middle (the "defender"), a gate at the end.', 'Dribble straight at the cone defender.', 'Just before it, do a trick, like stepping over the ball, then go the other way.', 'Sprint through the gate, dribble back on the outside, and your partner goes.'],
+  figure8: ['Each player has two cones 4 steps apart and a ball.', 'Dribble round the two cones in a figure-of-eight.', 'Right foot only round one cone, left foot only round the other.', 'Count your 8s in a minute and try to beat it.'],
+  fingers: ['You stand in the middle. Players are round the edge with a ball each.', 'They dribble towards you. Hold up some fingers.', 'They shout the number, turn, and dribble back out to the edge.', 'Repeat. They can only see your fingers if their head is up.'],
+  passgates: ['Pairs, one ball between two. Gates are dotted around.', 'Partners stand either side of a gate and pass through it to each other: that\'s a point.', 'Then the pair moves to a different gate and does it again.', 'Count points in 1 minute.'],
+  passshuffle: ['Pairs 8 steps apart, one ball. The receiver has 2 cones beside them.', 'The receiver shuffles sideways to one cone.', 'The passer passes to them; they pass straight back.', 'The receiver shuffles to the other cone and it repeats. Swap jobs after 1 minute.'],
+  passsquare: ['4 cones in a square with a player at each. One ball at the first cone.', 'Pass to the player at the next cone.', 'Then jog after your pass and stand at that cone.', 'The player who got it passes on and follows their pass. Keep it going round. Switch direction after a minute.'],
+  triangle: ['3 cones in a triangle with a player at each, one ball.', 'Pass to the next cone, then sprint to that cone.', 'Receive with the foot furthest from the ball so you\'re already facing the next cone.', 'Keep it going. Shout "Switch!" to change direction.'],
+  skittles: ['Two teams on lines facing each other. A row of cones (skittles) stands in the middle.', 'Players pass balls at the skittles to knock them over.', 'Balls that roll past go to the other team, who use them.', 'Count the skittles knocked down. You stand them back up.'],
+  rondo: ['4 players stand one on each side of a small square. One player (the "piggy") is in the middle.', 'The 4 pass the ball between them, keeping it from the piggy.', '5 passes in a row = a point.', 'If the piggy touches the ball, whoever passed it swaps into the middle.'],
+  throwtrap: ['Pairs 5 steps apart. One holds the ball.', 'They throw it gently underarm to their partner.', 'The partner stops it dead with a foot (or thigh) so it doesn\'t bounce away.', 'Then passes it back along the ground. 10 goes, then swap jobs.'],
+  openup: ['3 players in a line: one at each end, one in the middle. Small gates sit above and below the middle player.', 'An end player passes to the middle.', 'The middle player\'s first touch pushes the ball through one of the side gates.', 'Then they pass to the other end. It comes back and repeats the other way. Swap the middle player every minute.'],
+  droptrap: ['Everyone holds a ball in their hands.', 'Drop it, and as it lands stop it dead with the sole of your foot.', 'Dribble to a new space.', 'Pick it up and go again. Count clean traps.'],
+  footgolf: ['4 small gates ("holes") are set out, numbered 1 to 4.', 'Each player starts at the first cone with a ball.', 'Kick towards gate 1, walk to the ball, kick again, until it goes through.', 'Then on to gates 2, 3 and 4. Count your kicks. Fewest wins.'],
+  twogoal: ['Two goals facing each other with a keeper in each. Shooters in two lines at opposite corners.', 'The first player in each line dribbles out past a cone.', 'They shoot at the goal at the far end.', 'They collect their ball and join the other line. New keepers every 4 shots.'],
+  passturnshoot: ['A goal with a keeper. You stand back from the shooters with the balls.', 'A shooter stands with their back to the goal, facing you.', 'Pass to them. They turn with the ball and shoot.', 'The next shooter comes from the other line. New keeper every few shots.'],
+  anygoal: ['Small cone goals are dotted around the box. Everyone has a ball.', 'Dribble up to any goal and pass the ball through it.', 'Run through after it, collect it, and head for a different goal.', 'Count goals in 1 minute.'],
+  rebound: ['A goal with a keeper. Two lines of shooters, a ball each.', 'Shoot at goal from the cone.', 'Straight away, run in after it: if the keeper saves it, score the rebound.', 'Collect your ball and join the other line.'],
+  gateshoot: ['A goal with a keeper. Two lines of shooters, each with a small gate in front.', 'Dribble through your gate.', 'Shoot before you reach the line of cones.', 'Collect your ball and join the other line.'],
+  chooseshot: ['A goal with a keeper. Two marked zones: far (3 points) and close (1 point).', 'Dribble in and choose which zone to shoot from.', 'A goal from far = 3 points, from close = 1 point.', 'Collect your ball and go again. Everyone keeps their own score.'],
+  layoff: ['A goal with a keeper. You stand in front of the goal as a "wall".', 'A player passes the ball to you and keeps running.', 'You pass it back into their path.', 'They shoot first time without stopping it, then collect the ball and join the other line.'],
+  race1v1: ['Two lines 20 steps from goal: reds and blues.', 'Roll a ball into the middle.', 'The first red and the first blue race for it.', 'Whoever gets it tries to score; the other tries to stop them. Then the next two go.'],
+  line1v1: ['Pairs in a channel, one ball per pair.', 'The defender passes the ball to the attacker.', 'The attacker tries to dribble past and stop the ball on the defender\'s line with a foot on top.', 'The defender tries to win it. Then swap jobs.'],
+  twogates1v1: ['Pairs in a box, two gates at each end.', 'The attacker tries to dribble through either gate at the far end.', 'The defender tries to block them or win the ball.', 'Swap jobs each go.'],
+  shield: ['Half the players have a ball. The other half are pirates in bibs.', 'Pirates try to steal a ball.', 'Keep your body between the pirate and your ball: turn your back to them.', 'If a pirate takes your ball, you become a pirate. Swap every minute.'],
+  shadow: ['Pairs in a channel with a gate at each end.', 'The attacker dribbles towards the far gate.', 'The defender comes out, stands sideways, and pushes them towards the side line instead.', 'When the attacker takes a big touch, the defender wins the ball. Swap jobs.'],
+  castle: ['Players stand round a circle. A tall cone (the castle) is in the middle, with one guard.', 'The players pass around the circle.', 'When they see a gap, they kick it to knock the castle over.', 'Whoever knocks it down becomes the new guard.'],
+  twovone: ['Groups of 3: two attackers with a ball, one defender near the goal.', 'The attackers try to score.', 'The player with the ball dribbles at the defender. If the defender comes to them, they pass to the teammate.', 'If the defender stays with the teammate, keep dribbling and score. New defender each go.'],
+  bacon: ['Two teams on lines facing each other. Number each team 1, 2, 3 and so on.', 'Put a ball in the middle and shout a number.', 'That number from each team races to the ball.', 'Whoever gets it tries to dribble back over their own line; the other tries to win it.'],
+  recovery: ['Pairs in a lane: attacker with a ball, defender 2 steps behind.', 'Shout "Go!": the attacker dribbles to score in the goal at the end.', 'The defender chases and tries to get in front and take the ball.', 'Swap jobs each go.'],
+  hothands: ['Pairs 5 steps apart. One is the keeper.', 'The partner rolls the ball and the keeper scoops it up with both hands.', 'Next a throw at chest height, then one above the head.', 'The keeper throws it back each time. Swap every minute.'],
+  gkwars: ['Pairs. Each has a cone goal; the goals face each other 10 steps apart.', 'One keeper throws or rolls the ball to score in the other\'s goal.', 'The other keeper tries to save it.', 'If they save it, it\'s their throw. First to 5 goals.'],
+  shotstop: ['Pairs: one keeper in a cone goal, one shooter 8 steps away.', 'The shooter kicks it along the ground at the goal.', 'The keeper moves to get behind the ball and saves it.', 'The keeper rolls it back. 6 shots, then swap.'],
+  agility: ['A course: zig-zag cones, a row of cones to hop over, two cones to side-step between, and a pile of balls.', 'Run in and out of the zig-zag cones.', 'Hop over the row, then side-step.', 'Take a ball, dribble round the far cone and back, and leave it on the pile. Jog back and go again.'],
+  reaction: ['Pairs stand side by side in the middle with a ball each. A red gate is on one side, a blue gate on the other.', 'Shout a colour.', 'Both dribble to that gate as fast as they can.', 'First to stop it on the line wins. Back to the middle for the next one.'],
+  rps: ['Pairs face each other on the middle line.', 'They play rock, paper, scissors.', 'The winner chases the loser back to the loser\'s safe line.', 'A tag before the line is a point. Find a new partner.'],
+  mini3v3: ['Two teams on a small pitch with a small goal at each end.', 'Play a normal game with no keepers.', 'If the ball goes out, the other team dribbles it back in.', 'Change who plays who every 4 minutes.'],
+  fourgoals: ['Two teams. Each team attacks the 2 small goals at one end.', 'Score in either goal.', 'If one goal is crowded, pass across and attack the other one.', 'Change opponents every few minutes.'],
+  endzone: ['Two teams. There\'s a strip (end zone) at each end.', 'No shooting: score by dribbling into the other team\'s end zone.', 'Stop the ball there with a foot on top: that\'s a point.', 'The other team starts with the ball after each point.'],
+  gategame: ['Two teams. Gates are dotted around the pitch.', 'Score a point by passing through any gate to a teammate on the other side.', 'You can\'t use the same gate twice in a row.', 'The other team starts after each point.'],
+  worldcup: ['Teams of 3–5. Each team picks a country.', 'Small pitches side by side, two teams on each.', 'Play 4-minute games.', 'Winners move up a pitch, losers move down, and you play a new team. Keep score.'],
+  twoball: ['Two teams, small goals, a normal game.', 'But there are two balls in play at once.', 'Score with either ball.', 'Ball out? Get it back in quickly.'],
+  champions: ['Lots of tiny mini-pitches side by side. Teams of 2 or 3.', 'Mini-pitch 1 is the "Champions League".', '3-minute games. Winners move one mini-pitch towards mini-pitch 1, losers one away.', 'A draw? Rock, paper, scissors decides.'],
+  keepball: ['Groups of 6 in a box: 4 keep the ball, 2 in bibs try to win it.', 'The 4 pass to each other and move into space.', '5 passes in a row = a point.', 'If the 2 win it, the player who lost it swaps with one of them.'],
+  plusone: ['Two teams plus one extra player (the joker) in a different colour.', 'The joker always plays for whichever team has the ball.', 'So the team with the ball always has an extra player.', 'Play a normal game. Change the joker every few minutes.'],
+  growgame: ['As soon as two players are there, they play 1v1 on the small pitch.', 'When the next player arrives, they join whichever team has fewer.', 'Keep adding: 2v2, then 3v3, then 4v4.', 'Once a team has 5, start a second pitch with the next arrivals.'],
+  beatcoach: ['A coach goes in goal. Put a shooting cone about 10 steps out.', 'Each player who arrives grabs a ball, dribbles round the cone and shoots.', 'A goal is a point for the kids, a save is a point for the coach. Shout the score.', 'Collect your ball and go again. More than 6 there? Open a second goal with another coach.'],
+  keepyup: ['Everyone who arrives takes a ball and finds a space.', 'Level 1: drop the ball, kick it up once with your laces, catch it.', 'Level 2: two kicks, then catch. Level 3: one bounce allowed between kicks.', 'Players shout their best score to the coach and try to beat it next week.']
+};
+DRILLS.forEach(d => { d.walk = WALK[d.id] || []; });
+
+/* =========================================================
+   3. FAVOURITES (saved on this phone with localStorage)
+   ========================================================= */
+const FAV_KEY = 'trainingTonight.favourites.v1';
+let FAV = new Set();
+try { FAV = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')); } catch (e) { FAV = new Set(); }
+function saveFavs() { try { localStorage.setItem(FAV_KEY, JSON.stringify([...FAV])); } catch (e) { /* storage blocked: favourites last this visit only */ } }
+const byId = Object.fromEntries(DRILLS.map(d => [d.id, d]));
+
+/* =========================================================
+   4. SESSION SETUP STATE
+   ========================================================= */
+const S = {
+  players: { min: 35, max: 40, unknown: false },
+  coaches: { min: 3, max: 4, unknown: false },
+  balls: null,                 // null = not set (assume one each)
+  bibSets: [],                 // [{ c: 'Yellow', n: 10 }, ...] up to 4 sets
+  pitches: 2,                  // large caged pitches (8v8 size)
+  length: 60, arrival: 10, squads: false, focus: [], favFirst: true
+};
+let PLAN = null, LAYOUT = { at: {}, notes: [] };
+const BIB_COLOURS = [['Yellow', '#FFD23F'], ['Orange', '#FF7A1A'], ['Blue', '#1E6FD9'], ['Green', '#12A150'],
+  ['Red', '#E63946'], ['Pink', '#E84393'], ['White', '#F4F4F4'], ['Black', '#222222']];
+const bibHex = c => (BIB_COLOURS.find(b => b[0] === c) || ['', '#888'])[1];
+const lightBib = c => c === 'Yellow' || c === 'White';
+/* station groups are lettered (not red/green, so they never clash with the weekend squads) */
+const GROUP_FALLBACK = ['#1E6FD9', '#D99A00', '#8B5CF6', '#F26B0F', '#D6336C', '#0E9AA7', '#6B7280', '#7C4A1E'];
+function groupList(k, st, P) {
+  const sets = st.bibSets;
+  if (sets.length >= k) {
+    const size = Math.ceil(P / k);
+    return sets.slice(0, k).map(s => ({ name: s.c + 's', hex: bibHex(s.c), dark: lightBib(s.c), bibs: s.n >= size }));
+  }
+  return Array.from({ length: k }, (_, i) => ({ name: 'Group ' + 'ABCDEFGH'[i], hex: GROUP_FALLBACK[i], dark: false, bibs: false }));
+}
+
+/* =========================================================
+   5. PLAN GENERATION
+   Shape of every session:
+     warm-up (everyone) → station blocks (groups rotate, cones stay put) → final game
+   One station per coach (at most one at each end of each pitch); every group visits every station.
+   ========================================================= */
+
+/* What a drill needs for n players: areas side by side, balls, cones, bibs */
+function needs(d, n, minAreas = 1) {
+  const areas = Math.max(minAreas, Math.ceil(n / d.max)), per = n / areas, b = d.ball;
+  const balls = b === 'each' ? n : b === 'half' ? Math.ceil(n / 2) : b === 'third' ? Math.ceil(n / 3) : (b || 0) * areas;
+  const cones = areas * d.cones[0] + Math.ceil(d.cones[1] * n);
+  const bibs = d.bibs === 'team' ? Math.floor(n / 2) : d.bibs === 'few' ? areas * Math.max(1, Math.round(per / 5)) : 0;
+  return { areas, per, balls, cones, bibs, ok: n >= d.min && per >= d.min };
+}
+
+/* Numbers for the plan: the middle of each range, sensible defaults when blank */
+function readNumbers(st) {
+  const notes = [];
+  const pu = st.players.unknown, cu = st.coaches.unknown;
+  const P = pu ? 14 : Math.round((st.players.min + st.players.max) / 2);
+  const Plo = pu ? 10 : st.players.min, Phi = pu ? 18 : st.players.max;
+  const C = Math.max(1, cu ? 2 : st.coaches.min);   // plan for the coaches you're sure of
+  if (pu) notes.push('Player numbers not set: planned for about 14, and every drill works from 10 to 18.');
+  if (cu) notes.push('Coach numbers not set: planned for 2 coaches.');
+  const balls = st.balls == null ? P : st.balls;
+  if (st.balls == null) notes.push(`Balls not set, so the plan assumes one each (${P}).`);
+  else if (st.balls < P) notes.push(`${st.balls} balls for about ${P} players, so the plan favours drills where players share.`);
+  const bibs = st.bibSets.reduce((a, s) => a + s.n, 0);
+  return { notes, P, Plo, Phi, C, balls, bibs, cones: null };
+}
+
+/* Minutes for the warm-up (W), each station round (R) and the final game (G) */
+function timing(T, D, notes, arrivals) {
+  let W = arrivals ? 0 : clamp(Math.round(T * .15), 6, 12), G = clamp(Math.round(T * .25), 10, 25), M = Math.max(1, D - 2);
+  const middle = T - W - G;
+  while (M > 1 && middle / M < 6) M--;
+  if (M < D - 2) notes.push(`${D - 2} stations won't fit into ${T} minutes without rushing, so the plan has ${M}. Spare coaches can help at the busiest station.`);
+  let R = Math.floor(middle / M), spare = middle - R * M;
+  if (R > 15) { spare += (R - 15) * M; R = 15; }
+  let add = Math.min(spare, Math.max(0, 30 - G)); G += add; spare -= add;
+  if (!arrivals) { add = Math.min(spare, Math.max(0, 15 - W)); W += add; spare -= add; }
+  if (spare > 0) { R += Math.floor(spare / M); G += spare % M; }
+  if (R > 15 || G > 25) notes.push(`With ${M === 1 ? 'one station' : M + ' stations'} in ${T} minutes each turn runs long. Another coach means another station and shorter turns.`);
+  return { W, G, M, R };
+}
+
+/* Split M station drills into blocks of at most `cap` stations */
+function splitBlocks(M, cap) {
+  const nb = Math.ceil(M / cap), base = Math.floor(M / nb), extra = M % nb;
+  return Array.from({ length: nb }, (_, i) => base + (i < extra ? 1 : 0));
+}
+
+/* Choose the best drill for a slot.
+   o: role, n, lo, hi, mins, ballsLeft, cones, bibs, exclude, uncovered, usedPrimary, like (drill to stay similar to), rand, strict */
+function pickDrill(o) {
+  const tiers = [[], [], [], []];   // 0 fits everything, 1 short of cones, 2 short of balls, 3 group-size mismatch
+  for (const d of DRILLS) {
+    if (!d.role.includes(o.role) || o.exclude.has(d.id)) continue;
+    const nd = needs(d, o.n, o.minAreas || 1);
+    if (d.bibReq && (o.bibs == null || nd.bibs > o.bibs)) continue;
+    let tier = 0;
+    if (!nd.ok) tier = 3;
+    else if (o.ballsLeft != null && nd.balls > o.ballsLeft) tier = 2;
+    else if (o.cones != null && nd.cones > o.cones) tier = 1;
+    tiers[tier].push({ d, nd, s: scoreDrill(d, nd, o) });
+  }
+  const last = o.strict ? 2 : 3;
+  for (let t = 0; t <= last; t++) {
+    if (!tiers[t].length) continue;
+    tiers[t].sort((a, b) => b.s - a.s);
+    return Object.assign(tiers[t][0], { relaxed: ['', 'cones', 'balls', 'size'][t] });
+  }
+  return null;
+}
+function scoreDrill(d, nd, o) {
+  let s = o.rand() * 1.2;
+  const focus = S.focus;
+  const hits = focus.length ? d.focus.filter(f => focus.includes(f)).length : 0;
+  if (hits) s += 2 + hits * .6;
+  if (o.uncovered && d.focus.some(f => o.uncovered.has(f))) s += 2.5;
+  if (S.favFirst && FAV.has(d.id)) s += 2.2;
+  if (o.mins < d.dur[0]) s -= (d.dur[0] - o.mins) * .5;
+  if (o.mins > d.dur[1]) s -= (o.mins - d.dur[1]) * .35;
+  const robust = [o.lo, o.hi].every(m => m >= d.min && m / Math.max(1, Math.ceil(m / d.max)) >= d.min);
+  if (robust) s += .6;
+  if (nd.cones > 16) s -= .7;
+  if (o.usedPrimary && o.usedPrimary.has(d.focus[0])) s -= .8;
+  if (d.role[0] !== o.role) s -= o.role === 'g' ? 1 : .3;
+  if (o.role === 'w' && d.int === 3) s -= .2;
+  if (o.like) {
+    s += d.focus.filter(f => o.like.focus.includes(f)).length * 1.2;
+    s -= Math.abs(d.int - o.like.int) * .5;
+  }
+  return s;
+}
+
+function buildPlan(st, seed) {
+  const rand = rng(seed == null ? (Math.random() * 4294967295) >>> 0 : seed);
+  const N = readNumbers(st), notes = N.notes, AR = st.arrival || 0;
+  const stations = Math.max(1, Math.min(N.C, 2 * (st.pitches || 2), Math.floor(N.P / 3)));   // one per coach, one per pitch end
+  const tm = timing(st.length - AR, stations + 2, notes, AR > 0);
+  const uncovered = new Set(st.focus), used = new Set(), usedPrimary = new Set(), relaxed = new Set();
+  const slots = [], blocks = [], phases = [];
+  const take = (role, n, lo, hi, mins, ballsLeft, minAreas) => {
+    const base = { role, n, lo, hi, mins, ballsLeft, cones: null, bibs: N.bibs, uncovered, usedPrimary, rand, minAreas };
+    let r = pickDrill(Object.assign({ exclude: used }, base));
+    if (!r) r = pickDrill(Object.assign({ exclude: new Set() }, base));     // whole catalogue used: allow a repeat
+    used.add(r.d.id); usedPrimary.add(r.d.focus[0]); r.d.focus.forEach(f => uncovered.delete(f));
+    if (r.relaxed && role !== 'a') relaxed.add(r.relaxed);
+    return r;
+  };
+  let t = 0;
+  if (AR) {
+    const minA = st.squads ? 2 : 1;
+    const a = take('a', N.P, N.Plo, N.Phi, AR, N.balls, minA);
+    phases.push([slots.length]);
+    slots.push({ role: 'a', d: a.d, nd: a.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: AR, start: 0, end: AR, block: -1, minAreas: minA });
+    t = AR;
+  }
+  if (!AR) {                                  // no arrivals opener: a normal warm-up instead
+    const w = take('w', N.P, N.Plo, N.Phi, tm.W, N.balls);
+    phases.push([slots.length]);
+    slots.push({ role: 'w', d: w.d, nd: w.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.W, start: t, end: t + tm.W, block: -1 });
+    t += tm.W;
+  }
+  const cap = Math.max(1, Math.min(N.C, Math.floor(N.P / 3)));
+  splitBlocks(tm.M, cap).forEach((k, bi) => {
+    const n = Math.ceil(N.P / k), lo = Math.floor(N.Plo / k), hi = Math.ceil(N.Phi / k);
+    const blk = { k, R: tm.R, start: t, end: t + k * tm.R, group: N.P / k, slots: [] };
+    let left = N.balls;
+    const picks = [];
+    for (let s = 0; s < k; s++) {
+      const r = take('s', n, lo, hi, tm.R, Math.max(0, left));
+      left -= r.nd.balls;
+      picks.push(r);
+    }
+    /* smallest set-ups first: with an odd number of stations the biggest one gets a pitch to itself */
+    picks.sort((a, b) => a.nd.areas - b.nd.areas).forEach((r, s) => {
+      blk.slots.push(slots.length);
+      slots.push({ role: 's', d: r.d, nd: r.nd, n, lo, hi, mins: tm.R, start: t, end: blk.end, block: bi, station: s, k });
+    });
+    blocks.push(blk); phases.push(blk.slots.slice());
+    t = blk.end;
+  });
+  const g = take('g', N.P, N.Plo, N.Phi, tm.G, N.balls);
+  phases.push([slots.length]);
+  slots.push({ role: 'g', d: g.d, nd: g.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.G, start: t, end: t + tm.G, block: -1 });
+
+  if (relaxed.has('balls')) notes.push(`Some drills need more balls than you have (${N.balls}), so players share where needed.`);
+  if (relaxed.has('size')) notes.push('With these numbers some drills run with smaller groups than ideal; a coach can join in to make up numbers.');
+  if (uncovered.size) {
+    const names = [...uncovered].map(f => FOCUS_LABEL[f].toLowerCase());
+    notes.push(st.focus.length > slots.length
+      ? `More focus areas than activities tonight, so ${joinList(names)} will have to wait for another session.`
+      : `No ${joinList(names, 'or')} drill fits tonight's numbers, kit and time, so other drills fill those slots.`);
+  }
+  const plan = { st: JSON.parse(JSON.stringify(st)), N, tm, slots, blocks, phases, notes };
+  addKitNotes(plan);
+  return plan;
+}
+
+/* Kit for the evening: balls/bibs = the most used at once; cones = everything set out before kick-off */
+function kitTotals(plan) {
+  const sum = (idx, k) => idx.reduce((a, i) => a + plan.slots[i].nd[k], 0);
+  return {
+    balls: Math.max(...plan.phases.map(ph => sum(ph, 'balls'))),
+    bibs: Math.max(...plan.phases.map(ph => sum(ph, 'bibs'))),
+    cones: plan.phases.reduce((a, ph) => a + sum(ph, 'cones'), 0)
+  };
+}
+function addKitNotes(plan) {
+  plan.notes = plan.notes.filter(n => !n.startsWith('No bibs') && !n.startsWith('Tonight needs up to'));
+  const kit = kitTotals(plan), have = plan.N.bibs;
+  if (kit.bibs && !have) plan.notes.push('No bibs entered: each set-up says how to tell teams apart without them.');
+  else if (kit.bibs > have) plan.notes.push(`Tonight needs up to ${kit.bibs} bibs and you have ${have}: the set-ups say how to manage.`);
+}
+
+/* Swap one drill for a different one that suits the same slot */
+function swapSlot(i) {
+  const sl = PLAN.slots[i], N = PLAN.N;
+  sl.tried = sl.tried || new Set([sl.d.id]);
+  let ballsLeft = N.balls;
+  if (sl.role === 's') PLAN.blocks[sl.block].slots.forEach(j => { if (j !== i) ballsLeft -= PLAN.slots[j].nd.balls; });
+  const base = { role: sl.role, n: sl.n, lo: sl.lo, hi: sl.hi, mins: sl.mins, ballsLeft: Math.max(0, ballsLeft), cones: null, bibs: N.bibs, minAreas: sl.minAreas || 1,
+    like: sl.d, rand: Math.random, strict: true };
+  const inPlan = new Set(PLAN.slots.map(s => s.d.id));
+  let r = pickDrill(Object.assign({ exclude: new Set([...inPlan, ...sl.tried]) }, base));
+  if (!r) { sl.tried = new Set([sl.d.id]); r = pickDrill(Object.assign({ exclude: inPlan }, base)); }
+  if (!r) { toast('No other drill suits this slot tonight.'); return; }
+  sl.tried.add(r.d.id);
+  sl.d = r.d; sl.nd = r.nd;
+  addKitNotes(PLAN);
+  renderOverview();
+  const old = document.getElementById('slot-' + i);
+  resetAnims(old);
+  const card = cardEl(sl.d, sl, i);
+  old.replaceWith(card);
+  card.classList.add('flash');
+  toast(`Swapped in ${r.d.name}`);
+}
+
+/* =========================================================
+   6. RENDERING
+   ========================================================= */
+const $ = sel => document.querySelector(sel);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function joinList(a, word = 'and') { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' ' + word + ' ' + a[a.length - 1]; }
+const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.1l-5.7 3.2 1.2-6.4-4.7-4.4 6.4-.8z" stroke-linejoin="round"/></svg>';
+const SWAP = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3.5-3.5M20 16H7l3.5 3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* Where everything goes on the big pitches.
+   A caged 8v8 pitch fits 2–3 drill areas (ends and middle) or 2 small games across its width. */
+function layout(plan) {
+  const np = plan.st.pitches || 2, at = {}, notes = [];
+  const pos = (j, m) => m === 2 ? ['one end', 'the other end'][j] : m === 3 ? ['one end', 'the middle', 'the other end'][j] : `area ${j + 1}`;
+  const spread = a => {                       // a areas over np pitches: counts per pitch
+    const per = Math.ceil(a / np), out = [];
+    for (let left = a; left > 0; left -= per) out.push(Math.min(per, left));
+    return out;
+  };
+  plan.phases.forEach(ph => {
+    const sl = plan.slots[ph[0]];
+    if (ph.length > 1) {
+      const k = ph.length, onPitch = Array.from({ length: np }, () => []);
+      ph.forEach((idx, s) => onPitch[Math.min(np - 1, Math.floor(s * np / k))].push(idx));   // stations 1–2 on Pitch 1, 3–4 on Pitch 2
+      onPitch.forEach((list, p) => {
+        const areas = list.reduce((a, i) => a + plan.slots[i].nd.areas, 0);
+        if (areas > 4) notes.push(`Pitch ${p + 1} holds ${areas} station areas: keep each one small.`);
+        list.forEach((idx, j) => { at[idx] = list.length === 1 ? `Pitch ${p + 1}` : `Pitch ${p + 1}, ${pos(j, list.length)}`; });
+      });
+      return;
+    }
+    const a = sl.nd.areas, i = ph[0];
+    if (sl.role === 'a' && plan.st.squads) { at[i] = np >= 2 ? 'Reds on Pitch 1, Greens on Pitch 2' : 'Pitch 1: Reds one end, Greens the other'; return; }
+    if (sl.role === 'g') {
+      const c = spread(a);
+      if (c.some(n => n > 3)) notes.push('That\'s a lot of games per pitch: make them smaller or add a pitch.');
+      at[i] = a === 1 ? 'Pitch 1, played across the width'
+        : c.every(n => n === 1) ? (c.length === np ? 'One game on each pitch, played across the width' : `One game on each of pitches ${joinList(c.map((n, p) => p + 1))}, across the width`)
+        : c.map((n, p) => `Pitch ${p + 1}: ${n === 1 ? '1 game' : n + ' games side by side, across the width'}`).join('; ');
+      return;
+    }
+    if (a === 1) { at[i] = 'Pitch 1'; return; }
+    const c = spread(a);
+    at[i] = c.length === 1 ? `Pitch 1, ${a} areas side by side`
+      : c.every(n => n === 1) ? (c.length === np ? 'One area on each pitch' : `One area on each of pitches ${joinList(c.map((n, p) => p + 1))}`)
+      : c.map((n, p) => `Pitch ${p + 1}: ${n === 1 ? '1 area' : n + ' areas'}`).join('; ');
+  });
+  return { at, notes };
+}
+
+function renderOverview() {
+  const P = PLAN, N = P.N, st = P.st, kit = kitTotals(P);
+  LAYOUT = layout(P);
+  const box = $('#overview');
+  const rng2 = (r, u) => r.unknown ? u : (r.min === r.max ? r.min : `${r.min}–${r.max}`);
+  const sumLine = `${st.length} minutes for ${rng2(st.players, 'about 14')} players and ${rng2(st.coaches, '2')} coaches.`;
+  const segs = P.phases.map(ph => {
+    const sl = P.slots[ph[0]], mins = ph.length > 1 ? sl.k * sl.mins : sl.mins;
+    const label = sl.role === 'a' ? 'Arrive' : sl.role === 'w' ? `${mins}′` : sl.role === 'g' ? `Game ${mins}′` : (ph.length > 1 ? `${ph.length} stations` : esc(sl.d.name));
+    return `<span class="${sl.role}" style="flex:${mins}">${label}</span>`;
+  });
+  const order = P.slots.map((sl, i) => {
+    let sub;
+    if (sl.role === 'a') sub = st.squads ? 'Arrivals and warm-up: Reds and Greens to their own pitch' : 'Arrivals and warm-up: start with whoever is here';
+    else if (sl.role === 'w') sub = `Warm-up, everyone${sl.nd.areas > 1 ? ` in ${sl.nd.areas} areas` : ' together'}`;
+    else if (sl.role === 'g') sub = `Final game, ${sl.nd.areas === 1 ? 'one game' : sl.nd.areas + ' games at once'}`;
+    else sub = sl.k > 1 ? `Station ${sl.station + 1}, ${sl.mins} min per group` : `Everyone${sl.nd.areas > 1 ? ` in ${sl.nd.areas} areas` : ' together'}`;
+    sub += `. ${LAYOUT.at[i]}`;
+    const time = sl.role === 's' && sl.k > 1 ? `${sl.start}–${sl.end}′` : `${sl.start}–${sl.start + sl.mins}′`;
+    return `<li><a href="#slot-${i}"><span class="t">${time}</span><span class="n">${i + 1}</span><span class="what">${esc(sl.d.name)}<small>${sub}</small></span></a></li>`;
+  }).join('');
+  const rotas = P.blocks.filter(b => b.k > 1).map(b => {
+    const k = b.k, size = Math.floor(N.P / k), big = N.P % k, gs = groupList(k, st, N.P);
+    const sizeText = big ? `${size}–${size + 1}` : `${size}`;
+    let rows = '';
+    for (let r = 0; r < k; r++) {
+      rows += `<tr><td class="time">${b.start + r * b.R}–${b.start + (r + 1) * b.R}′</td>` +
+        Array.from({ length: k }, (_, s) => { const g = gs[(s - r + k) % k]; return `<td style="background:${g.hex};color:${g.dark ? '#14213D' : '#fff'}">${esc(g.name)}</td>`; }).join('') + '</tr>';
+    }
+    const heads = b.slots.map((i, s) => `<th>Station ${s + 1}<small>${esc(P.slots[i].d.name)}</small><small>${esc(LAYOUT.at[i])}</small></th>`).join('');
+    const wear = gs[0].bibs && gs.every(g => g.bibs) ? ' Each group wears its own bib colour.' : '';
+    return `<div class="panel"><h2>Stations, minutes ${b.start}–${b.end}</h2>
+      <p>Split into ${k} groups of ${sizeText}: ${joinList(gs.map(g => g.name))}.${wear} One coach stays at each station. Every ${b.R} minutes, each group moves on one station (Station ${k} goes back to Station 1). Set out all ${k} stations before kick-off; the cones stay put.</p>
+      <div class="rota-wrap"><table class="rota"><thead><tr><th></th>${heads}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }).join('');
+  const spare = Math.max(0, N.C - Math.max(1, ...P.blocks.map(b => b.k)));
+  const bibNote = !kit.bibs ? 'Not needed' : N.bibs ? `You have ${N.bibs}` : 'None entered';
+  box.innerHTML = `
+    <div class="plan-top"><button class="back" data-go="setup">‹ Change setup</button>
+      <h1>Tonight's plan</h1><p class="sum">${sumLine}</p></div>
+    <div class="share-row"><button type="button" class="wa" data-share="wa">${WA_ICON} Share on WhatsApp</button><button type="button" class="copy" data-share="copy">Copy</button></div>
+    ${P.notes.concat(LAYOUT.notes).length ? `<ul class="notes">${P.notes.concat(LAYOUT.notes).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    <div class="strip" aria-hidden="true">${segs.join('')}</div>
+    <ol class="order">${order}</ol>
+    ${rotas}
+    <div class="panel"><h2>Kit for tonight</h2>
+      <div class="kit">
+        <div><b>${kit.balls}</b><span>Balls</span><small>Most used at once</small></div>
+        <div><b>${kit.cones}</b><span>Cones</span><small>To set everything out before kick-off</small></div>
+        <div><b>${kit.bibs}</b><span>Bibs</span><small>${bibNote}</small></div>
+      </div>
+      ${spare ? `<p style="margin-top:10px">${spare === 1 ? 'Spare coach' : `${spare} spare coaches`}: join the busiest station and keep the balls coming back.</p>` : ''}
+    </div>`;
+  box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+  box.querySelector('[data-share="wa"]').onclick = () => openWhatsApp(sessionText(PLAN));
+  box.querySelector('[data-share="copy"]').onclick = () => copyText(sessionText(PLAN));
+  box.querySelectorAll('.order a').forEach(a => a.onclick = e => {
+    e.preventDefault();
+    const el = document.querySelector(a.getAttribute('href'));
+    if (el) { el.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+  });
+}
+
+function setupLines(d, sl, nd) {
+  const per = Math.round(nd.per), lines = [];
+  const fill = s => s.replace(/\{per\}/g, per).replace(/\{half\}/g, Math.max(1, Math.floor(per / 2))).replace(/\{few\}/g, Math.max(1, Math.round(per / 5)));
+  const squads = sl && sl.role === 'a' && PLAN.st.squads;
+  if (sl && sl.role === 'a') lines.push('Set this up before the first player arrives. Start as soon as two are here; late arrivals just join in.');
+  if (squads) lines.push(`Set it up ${nd.areas === 2 ? 'twice' : nd.areas + ' times'}: a Reds pitch and a Greens pitch. As each player arrives, point them to their squad's pitch.`);
+  if (sl && sl.role === 's' && sl.k > 1) lines.push(`Each group (about ${sl.n} players) comes through this station once.`);
+  if (nd.areas > 1 && !squads) lines.push(`Make ${nd.areas} of these areas side by side, about ${per} players in each.`);
+  d.setup.forEach(s => lines.push(fill(s)));
+  const bits = [];
+  if (nd.balls) bits.push(plural(nd.balls, 'ball'));
+  if (nd.cones) bits.push(plural(nd.cones, 'cone'));
+  if (nd.bibs) bits.push(plural(nd.bibs, 'bib'));
+  if (bits.length) lines.push('Kit: ' + joinList(bits) + '.');
+  const sets = sl ? PLAN.st.bibSets : [], have = sets.reduce((a, s) => a + s.n, 0);
+  if (nd.bibs && have >= nd.bibs && sets.length) {
+    const pick = sets.find(s => s.n >= nd.bibs);
+    lines.push(pick ? `Use the ${pick.c.toLowerCase()} bibs.` : `Use bibs from your ${joinList(sets.map(s => s.c.toLowerCase()))} sets.`);
+  } else if (nd.bibs) {
+    lines.push(d.bibs === 'team' ? 'Not enough bibs? One team keeps their jackets on.' : 'No bibs? Taggers hold a cone in their hand.');
+  }
+  return lines;
+}
+
+function cardEl(d, sl, i) {
+  const nd = sl ? sl.nd : needs(d, clamp(8, d.min, d.max));
+  const el = document.createElement('article');
+  el.className = 'drill role-' + (sl ? sl.role : d.role[0]);
+  el.id = sl ? 'slot-' + i : 'fav-' + d.id;
+  let meta;
+  if (!sl) meta = `Works for ${d.min}–${d.max} players per area, ${d.dur[0]}–${d.dur[1]} minutes.`;
+  else if (sl.role === 'a') meta = `<b>Arrivals and warm-up</b>, first ${sl.mins} minutes.${PLAN.st.squads ? ' Reds and Greens each go to their own pitch.' : ' Starts with whoever is here.'}`;
+  else if (sl.role === 'w') meta = `<b>Warm-up</b>, ${sl.mins} minutes. Everyone${nd.areas > 1 ? ` in ${nd.areas} areas side by side` : ' together'}.`;
+  else if (sl.role === 'g') meta = `<b>Final game</b>, ${sl.mins} minutes. ${nd.areas > 1 ? `${nd.areas} games at once` : 'One game'}, about ${Math.round(nd.per)} players in each.`;
+  else if (sl.k > 1) meta = `<b>Station ${sl.station + 1}</b>, ${sl.mins} minutes per group. One coach stays here.`;
+  else meta = `<b>${sl.mins} minutes</b>, everyone${nd.areas > 1 ? ` in ${nd.areas} areas side by side` : ' together'}.`;
+  if (sl && LAYOUT.at[i]) meta += `<br><b>Where:</b> ${esc(LAYOUT.at[i])}.`;
+  const focusSel = sl ? PLAN.st.focus : [];
+  el.innerHTML = `
+    <div class="drill-head">
+      <span class="num">${sl ? i + 1 : ''}</span>
+      <div><h3>${esc(d.name)}</h3><p class="meta">${meta}</p></div>
+      <button class="star" data-id="${d.id}" aria-pressed="${FAV.has(d.id)}" aria-label="Favourite ${esc(d.name)}">${STAR}</button>
+    </div>
+    <div class="tags">${d.focus.map(f => `<span class="${focusSel.includes(f) ? 'hit' : ''}">${esc(FOCUS_LABEL[f])}</span>`).join('')}</div>
+    <figure class="anim" role="img" aria-label="Animation of ${esc(d.name)}"><svg xmlns="http://www.w3.org/2000/svg"></svg><button class="playbtn"></button></figure>
+    <div class="sect"><h4>Set-up</h4><ol>${setupLines(d, sl, nd).map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+    <div class="sect"><h4>How it works</h4><p>${esc(d.how)}</p></div>
+    <button class="explain" aria-expanded="false">Not clear? Talk me through it</button>
+    <div class="walk" hidden>
+      <h4>Step by step</h4>
+      <ol>${d.walk.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+      <p class="slow">The animation above is now playing at half speed.</p>
+    </div>
+    <div class="sect"><h4>Coaching points</h4><ul>${d.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
+    <div class="tweak"><div><b>Make it easier</b>${esc(d.easy)}</div><div><b>Make it harder</b>${esc(d.hard)}</div></div>
+    ${sl ? `<button class="swap">${SWAP} Swap drill</button>` : ''}`;
+  if (!sl) el.querySelector('.num').remove();
+  const fig = el.querySelector('.anim');
+  attachAnim(fig, d);
+  const ex = el.querySelector('.explain'), walk = el.querySelector('.walk');
+  ex.onclick = () => {
+    const open = walk.hidden;
+    walk.hidden = !open;
+    ex.setAttribute('aria-expanded', open);
+    ex.textContent = open ? 'Hide the step-by-step' : 'Not clear? Talk me through it';
+    const st = fig._anim;
+    if (st) { st.speed = open ? .5 : 1; if (open) { st.t = 0; st.playing = true; st.last = 0; fig.querySelector('.playbtn').innerHTML = ICON_PAUSE; } }
+    if (open) fig.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+  };
+  el.querySelector('.star').onclick = () => toggleFav(d.id);
+  if (sl) el.querySelector('.swap').onclick = () => swapSlot(i);
+  return el;
+}
+
+function renderPlan() {
+  const v = $('#view-plan');
+  resetAnims(v);
+  v.innerHTML = '<div id="overview"></div><div class="drills" id="drillList"></div>';
+  renderOverview();
+  const list = $('#drillList');
+  PLAN.slots.forEach((sl, i) => list.appendChild(cardEl(sl.d, sl, i)));
+}
+
+function renderFavs() {
+  const v = $('#view-favs');
+  resetAnims(v);
+  const list = [...FAV].map(id => byId[id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+  v.innerHTML = `<div class="plan-top"><h1>Favourites</h1>${list.length ? `<p class="sum">${plural(list.length, 'drill')} starred. Turn on "Use my favourites first" in setup to put them into plans.</p>` : ''}</div>
+    ${list.length ? '' : '<div class="empty"><h2>No favourites yet</h2><p>Tap the star on any drill in a plan to keep it here.</p><button class="back" data-go="setup">‹ Back to setup</button></div>'}
+    <div class="drills" id="favList"></div>`;
+  v.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+  const box = $('#favList');
+  list.forEach(d => box.appendChild(cardEl(d, null)));
+}
+
+function toggleFav(id) {
+  if (FAV.has(id)) FAV.delete(id); else FAV.add(id);
+  saveFavs();
+  document.querySelectorAll(`.star[data-id="${id}"]`).forEach(b => b.setAttribute('aria-pressed', FAV.has(id)));
+  updateFavCount();
+  toast(FAV.has(id) ? 'Added to favourites' : 'Removed from favourites');
+}
+function updateFavCount() {
+  $('#favCount').textContent = FAV.size;
+  const chip = document.querySelector('[data-favfirst]');
+  if (chip) chip.closest('.field').hidden = FAV.size === 0;
+}
+
+let toastTimer = 0;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function show(view) {
+  if (view === 'plan' && !PLAN) return;
+  ['setup', 'plan', 'match', 'favs'].forEach(v => { $('#view-' + v).hidden = v !== view; });
+  document.querySelectorAll('.top nav button').forEach(b => b.setAttribute('aria-current', b.dataset.go === view ? 'page' : 'false'));
+  if (view === 'favs') renderFavs();
+  if (view === 'match') renderMatch();
+  window.scrollTo(0, 0);
+}
+
+/* =========================================================
+   7. SETUP SCREEN
+   ========================================================= */
+const LIMITS = { 'players.min': [1, 60, 1], 'players.max': [1, 60, 1], 'coaches.min': [1, 10, 1], 'coaches.max': [1, 10, 1],
+  balls: [0, 80, 1], drills: [3, 8, 1], pitches: [1, 4, 1], bib: [1, 40, 1] };
+function stepperHTML(path, label) {
+  return `<div class="stepper" role="group" aria-label="${label}">
+    <button type="button" data-step="${path}" data-d="-1" aria-label="${label}: fewer">−</button>
+    <input class="num-in" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-out="${path}" aria-label="${label}">
+    <button type="button" data-step="${path}" data-d="1" aria-label="${label}: more">+</button></div>`;
+}
+function renderSetup() {
+  const range = (key, title, hint) => `<div class="field" data-field="${key}">
+      <div class="field-head"><h2>${title}</h2><span class="hint">${hint}</span>
+        <button type="button" class="chip small" data-unknown="${key}">Not sure</button></div>
+      <div class="range">${stepperHTML(key + '.min', title + ' from')}<span class="to">to</span>${stepperHTML(key + '.max', title + ' up to')}</div></div>`;
+  $('#view-setup').innerHTML = `
+    <div class="hero"><h1>Plan tonight's session</h1>
+      <p>Set the numbers, tap the button, and the plan is ready for any coach to run.</p></div>
+    ${range('players', 'Players', 'Give a range if unsure')}
+    ${range('coaches', 'Coaches', 'Each coach runs a station')}
+    <div class="field" data-field="balls">
+      <div class="field-head"><h2>Balls</h2><span class="hint">Optional</span>
+        <button type="button" class="chip small" data-clear="balls">Not sure</button></div>
+      ${stepperHTML('balls', 'Balls')}</div>
+    <div class="field" data-field="bibs">
+      <div class="field-head"><h2>Bibs</h2><span class="hint">Up to 4 sets</span></div>
+      <div id="bibSets"></div></div>
+    <div class="field"><div class="field-head"><h2>Pitches</h2></div>
+      ${stepperHTML('pitches', 'Pitches')}</div>
+    <div class="field"><div class="field-head"><h2>Session length</h2><span class="hint">Minutes, including arrivals</span></div>
+      <div class="chips big">${[45, 60, 75, 90].map(m => `<button type="button" class="chip" data-len="${m}">${m}</button>`).join('')}</div></div>
+    <div class="field"><div class="field-head"><h2>Arrivals</h2><span class="hint">An easy opener as players trickle in. It's also the warm-up.</span></div>
+      <div class="chips">${[[0, 'No, a normal warm-up'], [5, '5 min'], [10, '10 min'], [15, '15 min']].map(([m, l]) => `<button type="button" class="chip" data-arr="${m}">${l}</button>`).join('')}</div>
+      <div class="chips" id="squadRow" style="margin-top:10px"><button type="button" class="chip" data-squads>Reds and Greens to their own pitch</button></div></div>
+    <div class="field"><div class="field-head"><h2>Focus</h2><span class="hint">Optional, pick any</span></div>
+      <div class="chips">${FOCUS.map(([k, l]) => `<button type="button" class="chip" data-focus="${k}">${l}</button>`).join('')}</div></div>
+    <div class="field"><div class="field-head"><h2>Favourites</h2></div>
+      <div class="chips"><button type="button" class="chip" data-favfirst>Use my favourites first</button></div></div>
+    <button type="button" class="go" id="goBtn">Set Up Session</button>
+    <p class="small-note">Same settings, different drills: tap again for a fresh plan.</p>`;
+  bindSetup();
+  renderBibs();
+  syncSetup();
+}
+function renderBibs() {
+  const box = $('#bibSets'), used = S.bibSets.map(s => s.c);
+  box.innerHTML = (S.bibSets.length ? S.bibSets.map((s, i) => `
+      <div class="bibrow"><span class="swatch" style="background:${bibHex(s.c)}"></span><b>${s.c}</b>
+        ${stepperHTML('bib.' + i, s.c + ' bibs')}
+        <button type="button" class="chip small" data-delbib="${i}" aria-label="Remove ${s.c} bibs">Remove</button></div>`).join('')
+      : '<p class="small-note" style="margin:0 0 10px">No bibs added. Add a set for each colour you have.</p>') +
+    (S.bibSets.length < 4 ? `<div class="chips bibadd"><span class="hint">Add a set:</span>${BIB_COLOURS.filter(c => !used.includes(c[0])).map(([c, h]) =>
+      `<button type="button" class="chip small" data-addbib="${c}"><span class="dot" style="background:${h}"></span>${c}</button>`).join('')}</div>` : '');
+  bindSteppers(box);
+  box.querySelectorAll('[data-addbib]').forEach(b => b.onclick = () => { S.bibSets.push({ c: b.dataset.addbib, n: 10 }); renderBibs(); syncSetup(); });
+  box.querySelectorAll('[data-delbib]').forEach(b => b.onclick = () => { S.bibSets.splice(+b.dataset.delbib, 1); renderBibs(); syncSetup(); });
+}
+function syncSetup() {
+  document.querySelectorAll('[data-out]').forEach(o => {
+    const path = o.dataset.out;
+    let v;
+    if (path.startsWith('bib.')) v = S.bibSets[+path.slice(4)].n;
+    else if (path.includes('.')) { const [k, m] = path.split('.'); v = S[k][m]; }
+    else v = S[path];
+    if (document.activeElement !== o) o.value = v == null ? '' : v;
+    o.placeholder = v == null ? 'Not set' : '';
+    o.classList.toggle('unset', v == null);
+  });
+  ['players', 'coaches'].forEach(k => {
+    const f = document.querySelector(`[data-field="${k}"]`);
+    f.classList.toggle('is-unknown', S[k].unknown);
+    f.querySelector('[data-unknown]').setAttribute('aria-pressed', S[k].unknown);
+  });
+  document.querySelector('[data-clear="balls"]').setAttribute('aria-pressed', S.balls == null);
+  document.querySelectorAll('[data-len]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.len === S.length));
+  document.querySelectorAll('[data-arr]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.arr === S.arrival));
+  $('#squadRow').hidden = !S.arrival;
+  document.querySelector('[data-squads]').setAttribute('aria-pressed', S.squads);
+  document.querySelectorAll('[data-focus]').forEach(b => b.setAttribute('aria-pressed', S.focus.includes(b.dataset.focus)));
+  document.querySelector('[data-favfirst]').setAttribute('aria-pressed', S.favFirst);
+  updateFavCount();
+}
+function step(path, d) {
+  if (path.startsWith('bib.')) {
+    const s = S.bibSets[+path.slice(4)];
+    s.n = clamp(s.n + d, LIMITS.bib[0], LIMITS.bib[1]);
+  } else if (path.includes('.')) {
+    const [lo, hi, inc] = LIMITS[path], [k, m] = path.split('.'), r = S[k];
+    r.unknown = false;
+    r[m] = clamp(r[m] + d * inc, lo, hi);
+    if (m === 'min' && r.max < r.min) r.max = r.min;
+    if (m === 'max' && r.min > r.max) r.min = r.max;
+  } else if (path === 'drills' || path === 'pitches') {
+    S[path] = clamp(S[path] + d, LIMITS[path][0], LIMITS[path][1]);
+  } else if (S[path] == null) {
+    S[path] = S.players.unknown ? 14 : Math.round((S.players.min + S.players.max) / 2);
+  } else {
+    S[path] = clamp(S[path] + d * LIMITS[path][2], LIMITS[path][0], LIMITS[path][1]);
+  }
+  syncSetup();
+}
+/* typed numbers: clamp to the allowed range; a blank box clears an optional field */
+function setVal(path, raw) {
+  const txt = String(raw).trim(), v = parseInt(txt, 10);
+  if (path.startsWith('bib.')) { if (!isNaN(v)) S.bibSets[+path.slice(4)].n = clamp(v, LIMITS.bib[0], LIMITS.bib[1]); }
+  else if (path.includes('.')) {
+    if (!isNaN(v)) {
+      const [lo, hi] = LIMITS[path], [k, m] = path.split('.'), r = S[k];
+      r.unknown = false; r[m] = clamp(v, lo, hi);
+      if (m === 'min' && r.max < r.min) r.max = r.min;
+      if (m === 'max' && r.min > r.max) r.min = r.max;
+    }
+  } else if (path === 'drills' || path === 'pitches') { if (!isNaN(v)) S[path] = clamp(v, LIMITS[path][0], LIMITS[path][1]); }
+  else S[path] = txt === '' || isNaN(v) ? null : clamp(v, LIMITS[path][0], LIMITS[path][1]);
+  syncSetup();
+}
+/* steppers: tap to change by one, hold to keep going, or tap the number and type */
+function bindSteppers(root) {
+  let holdT = 0, repT = 0;
+  const stop = () => { clearTimeout(holdT); clearInterval(repT); };
+  root.querySelectorAll('[data-step]').forEach(b => {
+    b.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      stop();
+      const go = () => step(b.dataset.step, +b.dataset.d);
+      go();
+      holdT = setTimeout(() => { repT = setInterval(go, 90); }, 420);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+    b.addEventListener('click', e => { if (e.detail === 0) step(b.dataset.step, +b.dataset.d); });   // keyboard
+    b.addEventListener('contextmenu', e => e.preventDefault());
+  });
+  root.querySelectorAll('input.num-in').forEach(inp => {
+    inp.addEventListener('focus', () => { inp.select(); setTimeout(() => inp.select(), 0); });
+    inp.addEventListener('input', () => { inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 3); });
+    inp.addEventListener('change', () => setVal(inp.dataset.out, inp.value));
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
+  });
+}
+function bindSetup() {
+  const root = $('#view-setup');
+  bindSteppers(root);
+  root.querySelectorAll('[data-unknown]').forEach(b => b.onclick = () => { const k = b.dataset.unknown; S[k].unknown = !S[k].unknown; syncSetup(); });
+  root.querySelector('[data-clear="balls"]').onclick = () => { if (S.balls == null) step('balls', 0); else { S.balls = null; syncSetup(); } };
+  root.querySelectorAll('[data-len]').forEach(b => b.onclick = () => { S.length = +b.dataset.len; syncSetup(); });
+  root.querySelectorAll('[data-arr]').forEach(b => b.onclick = () => { S.arrival = +b.dataset.arr; syncSetup(); });
+  root.querySelector('[data-squads]').onclick = () => { S.squads = !S.squads; syncSetup(); };
+  root.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => {
+    const f = b.dataset.focus;
+    S.focus = S.focus.includes(f) ? S.focus.filter(x => x !== f) : S.focus.concat(f);
+    syncSetup();
+  });
+  root.querySelector('[data-favfirst]').onclick = () => { S.favFirst = !S.favFirst; syncSetup(); };
+  $('#goBtn').onclick = () => {
+    const a = document.activeElement;
+    if (a && a.classList && a.classList.contains('num-in')) setVal(a.dataset.out, a.value);
+    PLAN = buildPlan(S);
+    document.querySelector('[data-go="plan"]').disabled = false;
+    renderPlan();
+    show('plan');
+  };
+}
+
+/* =========================================================
+   8. START
+   ========================================================= */
+function init() {
+  renderSetup();
+  document.querySelectorAll('.top nav button').forEach(b => b.onclick = () => show(b.dataset.go));
+  $('#brand').onclick = () => show('setup');
+  requestAnimationFrame(tick);
+}
+if (typeof document !== 'undefined' && document.getElementById) {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+}
+
+/* =========================================================
+   9. SHARING (WhatsApp / copy)
+   ========================================================= */
+/* Share as real text: the phone's share sheet first (pick WhatsApp there),
+   then fall back to copying the text and opening WhatsApp. */
+async function openWhatsApp(text) {
+  if (navigator.share) {
+    try { await navigator.share({ text }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }      // user closed the share sheet
+  }
+  copyText(text, true);
+  toast('Text copied. If WhatsApp only shows a link, paste the message instead.');
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+function copyText(text, quiet) {
+  const done = () => { if (!quiet) toast('Copied: paste it into WhatsApp'); };
+  if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done)); }
+  else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) { toast('Copy blocked: select and copy the text by hand'); }
+  ta.remove();
+}
+
+/* The session as a WhatsApp message (WhatsApp shows *text* in bold) */
+function sessionText(P) {
+  const st = P.st, L = [];
+  LAYOUT = layout(P);
+  const rng2 = (r, u) => r.unknown ? u : (r.min === r.max ? r.min : `${r.min}–${r.max}`);
+  L.push(`⚽ *Training tonight*: ${st.length} minutes, ${rng2(st.players, 'about 14')} players`);
+  P.phases.forEach(ph => {
+    const sl = P.slots[ph[0]];
+    L.push('');
+    if (ph.length > 1) {
+      const b = P.blocks[sl.block], gs = groupList(b.k, st, P.N.P);
+      L.push(`*${b.start}–${b.end}′ Stations* (${b.R} min each, groups ${joinList(gs.map(g => g.name.replace(/^Group /, '')))} move one station on each time)`);
+      ph.forEach((i, s) => { const d = P.slots[i].d; L.push(`${s + 1}. *${d.name}* (${LAYOUT.at[i]}): ${d.how}`); });
+    } else {
+      const label = sl.role === 'a' ? 'Arrivals and warm-up' : sl.role === 'w' ? 'Warm-up' : sl.role === 'g' ? 'Final game' : 'Everyone';
+      L.push(`*${sl.start}–${sl.start + sl.mins}′ ${label}: ${sl.d.name}*`);
+      L.push(`📍 ${LAYOUT.at[ph[0]]}`);
+      L.push(sl.d.how);
+    }
+  });
+  const kit = kitTotals(P);
+  L.push('', `🎒 Kit: ${kit.balls} balls, ${kit.cones} cones${kit.bibs ? `, ${kit.bibs} bibs` : ''}`);
+  return L.join('\n');
+}
+
+/* =========================================================
+   10. MATCHDAY GAME TIME
+   Each squad plays as two teams of 5 on two pitches at once,
+   then the teams swap opponents: 2 matches, 4 halves in all.
+   "First half only" = match 1, "second half only" = match 2.
+   ========================================================= */
+const MD_KEY = 'trainingTonight.matchday.v1';
+let MD = { squad: 'Reds', half: 10, size: 5, seed: 1, paste: '', squads: { Reds: [], Greens: [] } };
+try { const s = JSON.parse(localStorage.getItem(MD_KEY) || 'null'); if (s && s.squads) MD = Object.assign(MD, s); } catch (e) { /* first visit */ }
+function saveMD() { try { localStorage.setItem(MD_KEY, JSON.stringify(MD)); } catch (e) { /* storage blocked */ } }
+let MD_RESULT = null;
+const AV = [['full', 'Full'], ['first', '1st half'], ['second', '2nd half'], ['out', 'Out']];
+const PERIODS = ['Match 1, 1st half', 'Match 1, 2nd half', 'Match 2, 1st half', 'Match 2, 2nd half'];
+const PERIOD_SHORT = ['M1 1st', 'M1 2nd', 'M2 1st', 'M2 2nd'];
+const quartersFor = a => a === 'full' ? [0, 1, 2, 3] : a === 'first' ? [0, 1] : a === 'second' ? [2, 3] : [];
+
+function availabilityMessage(squad) {
+  return `⚽ *Saturday matches: ${squad}*\nPlease add your son's name under ONE heading, then copy the whole message and post it back in the group.\n\n✅ Full morning:\n\n🕐 First half only (match 1):\n\n🕑 Second half only (match 2):\n\n❌ Can't play:\n`;
+}
+
+/* Read names under the headings from a pasted WhatsApp message */
+function parseReplies(text) {
+  const found = [];
+  let cur = null;
+  const headOf = s => {
+    if (/can'?t|cannot|can not|not (playing|available)|unavailable|\bout\b|\bno\b/.test(s)) return 'out';
+    if (/second|2nd|match 2|later/.test(s)) return 'second';
+    if (/first|1st|match 1|early/.test(s)) return 'first';
+    if (/full|all|whole|both/.test(s)) return 'full';
+    return null;
+  };
+  for (const raw of text.split(/\r?\n/)) {
+    let line = raw.replace(/^\[[^\]]{4,30}\]\s*[^:]{1,40}:\s*/, '')                 // "[10/10/2026, 18:01] Name:" prefixes
+      .replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F\u200D*_~]/gu, ' ').trim();
+    if (!line) continue;
+    const low = line.toLowerCase(), colon = line.indexOf(':');
+    const headPart = colon >= 0 ? low.slice(0, colon) : low;
+    const h = headOf(headPart);
+    const words = headPart.split(/\s+/).length;
+    let names = '';
+    if (h && (colon >= 0 || words <= 6) && !/saturday|please|add your/.test(headPart)) { cur = h; names = colon >= 0 ? line.slice(colon + 1) : ''; }
+    else if (cur) names = line;
+    if (!cur || !names.trim()) continue;
+    names.split(/,|&|\+|\/|\band\b/i).forEach(n => {
+      const name = n.replace(/^\s*\d+\s*[.)]\s*/, '').replace(/^[\s\-•·]+/, '').replace(/[.!?()]+$/g, '').trim();
+      if (name.length >= 2 && name.length <= 30 && !/please|heading|message|group/i.test(name)) {
+        found.push({ name: name.replace(/\b\w/g, c => c.toUpperCase()), avail: cur });
+      }
+    });
+  }
+  return found;
+}
+function mergeReplies(list) {
+  const squad = MD.squads[MD.squad];
+  list.forEach(({ name, avail }) => {
+    const low = name.toLowerCase(), first = low.split(' ')[0];
+    let kid = squad.find(k => k.name.toLowerCase() === low);
+    if (!kid) { const m = squad.filter(k => k.name.toLowerCase().split(' ')[0] === first); if (m.length === 1 && !low.includes(' ')) kid = m[0]; }
+    if (kid) kid.avail = avail; else squad.push({ name, avail });
+  });
+  saveMD();
+}
+
+/* Share the halves fairly. Kids stay with one team all morning. */
+function allocate(kids, size, seed) {
+  const rand = rng(seed);
+  const avail = kids.filter(k => quartersFor(k.avail).length);
+  const order = avail.map(k => ({ k, r: rand() }))
+    .sort((a, b) => quartersFor(a.k.avail).length - quartersFor(b.k.avail).length || a.r - b.r).map(o => o.k);
+  const teams = [[], []], cnt = [[0, 0, 0, 0], [0, 0, 0, 0]];
+  order.forEach(k => {
+    const q = quartersFor(k.avail), cost = t => q.reduce((a, x) => a + cnt[t][x], 0) * 10 + teams[t].length;
+    const t = cost(0) < cost(1) ? 0 : cost(1) < cost(0) ? 1 : (rand() < .5 ? 0 : 1);
+    teams[t].push(k); q.forEach(x => cnt[t][x]++);
+  });
+  const notes = [];
+  const result = teams.map((tm, ti) => {
+    const played = new Map(tm.map(k => [k.name, 0])), gk = new Map(tm.map(k => [k.name, 0])), tie = new Map(tm.map(k => [k.name, rand()]));
+    const quarters = [0, 1, 2, 3].map(q => {
+      const av = tm.filter(k => quartersFor(k.avail).includes(q));
+      const future = k => quartersFor(k.avail).filter(x => x > q).length;
+      av.sort((a, b) => played.get(a.name) - played.get(b.name) || future(a) - future(b) || tie.get(a.name) - tie.get(b.name));
+      const on = av.slice(0, size), bench = av.slice(size);
+      on.forEach(k => played.set(k.name, played.get(k.name) + 1));
+      let keeper = null;
+      if (on.length) {
+        keeper = on.slice().sort((a, b) => gk.get(a.name) - gk.get(b.name) || tie.get(a.name) - tie.get(b.name))[0].name;
+        gk.set(keeper, gk.get(keeper) + 1);
+      }
+      if (on.length < size) notes.push(`Team ${ti + 1} has only ${on.length} for ${PERIODS[q].toLowerCase()}: play ${on.length}-a-side or borrow a player.`);
+      return { on: on.map(k => k.name), bench: bench.map(k => k.name), keeper };
+    });
+    return { kids: tm, quarters, played, gk };
+  });
+  return { teams: result, notes };
+}
+
+function lineupText(res) {
+  const L = [`⚽ *${MD.squad}: Saturday game time* (halves of ${MD.half} min)`];
+  res.teams.forEach((t, ti) => {
+    L.push('', `*${MD.squad} ${ti + 1}*`);
+    t.quarters.forEach((q, i) => {
+      if (!q.on.length) return;
+      const on = q.on.map(n => n === q.keeper ? `${n} (GK)` : n).join(', ');
+      L.push(`${PERIODS[i]}: ${on}${q.bench.length ? `. Sub: ${q.bench.join(', ')}` : ''}`);
+    });
+    L.push('Minutes: ' + t.kids.map(k => `${k.name} ${t.played.get(k.name) * MD.half}`).join(', '));
+  });
+  return L.join('\n');
+}
+
+function renderMatch() {
+  const v = $('#view-match'), squad = MD.squads[MD.squad];
+  const counts = { full: 0, first: 0, second: 0, out: 0, '?': 0 };
+  squad.forEach(k => counts[k.avail || '?']++);
+  v.innerHTML = `
+    <div class="plan-top"><h1>Saturday game time</h1>
+      <p class="sum">Each squad plays as two teams of ${MD.size} on two pitches, then the teams swap opponents. Two matches, four halves.</p></div>
+    <div class="chips" style="margin-top:14px">${['Reds', 'Greens'].map(s => `<button type="button" class="chip squad-${s}" data-squad="${s}" aria-pressed="${MD.squad === s}">${s}</button>`).join('')}</div>
+    <div class="panel"><h2>1. Ask who can play</h2>
+      <p>Post this in the parents' group. Each parent adds their son's name under one heading and posts the list back.</p>
+      <div class="share-row"><button type="button" class="wa" data-act="askwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="askcopy">Copy</button></div></div>
+    <div class="panel"><h2>2. Paste the replies</h2>
+      <p>Copy the latest version of the list from WhatsApp and paste it here.</p>
+      <textarea id="mdPaste" rows="6" placeholder="Paste the WhatsApp list here">${esc(MD.paste || '')}</textarea>
+      <button type="button" class="swap" data-act="read" style="margin-top:10px">Read the names</button></div>
+    <div class="panel"><h2>3. Check the squad</h2>
+      <p>${squad.length ? `${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} out${counts['?'] ? `, ${counts['?']} not replied` : ''}. Tap to change anyone.` : 'No names yet. Paste the replies above, or add names below.'}</p>
+      <div class="kids">${squad.map((k, i) => `
+        <div class="kid${k.avail && k.avail !== '?' ? '' : ' unk'}"><span class="kname">${esc(k.name)}</span>
+          <div class="seg">${AV.map(([a, l]) => `<button type="button" data-kid="${i}" data-av="${a}" aria-pressed="${k.avail === a}">${l}</button>`).join('')}</div>
+          <button type="button" class="kdel" data-del="${i}" aria-label="Remove ${esc(k.name)}">×</button></div>`).join('')}</div>
+      <div class="addkid"><input id="mdName" type="text" placeholder="Add a name" autocomplete="off"><button type="button" class="chip" data-act="add">Add</button></div>
+      <div class="md-set">
+        <div><b>Half length</b><div class="mini"><button type="button" data-md="half" data-d="-1" aria-label="Shorter halves">−</button><span>${MD.half} min</span><button type="button" data-md="half" data-d="1" aria-label="Longer halves">+</button></div></div>
+        <div><b>Players per team</b><div class="mini"><button type="button" data-md="size" data-d="-1" aria-label="Fewer per team">−</button><span>${MD.size}</span><button type="button" data-md="size" data-d="1" aria-label="More per team">+</button></div></div>
+      </div>
+      ${squad.length ? '<button type="button" class="back" data-act="reset">New week: clear everyone\'s answer</button>' : ''}</div>
+    <button type="button" class="go" data-act="plan">Plan game time</button>
+    <div id="mdResult"></div>`;
+  bindMatch();
+  if (MD_RESULT && MD_RESULT.squad === MD.squad) renderResult();
+}
+
+function renderResult() {
+  const box = $('#mdResult'), res = MD_RESULT.res;
+  const notReplied = MD.squads[MD.squad].filter(k => !k.avail || k.avail === '?').length;
+  const notes = res.notes.slice();
+  if (notReplied) notes.unshift(`${notReplied} not replied yet, so they're left out. Mark them and plan again.`);
+  box.innerHTML = `
+    ${notes.length ? `<ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    ${res.teams.map((t, ti) => `
+      <div class="panel"><h2>${MD.squad} ${ti + 1}</h2>
+        <div class="rota-wrap"><table class="gt">
+          <thead><tr><th>Player</th>${PERIOD_SHORT.map(p => `<th>${p}</th>`).join('')}<th>Mins</th></tr></thead>
+          <tbody>${t.kids.map(k => `<tr><td class="nm">${esc(k.name)}</td>${t.quarters.map((q, qi) => {
+            if (!quartersFor(k.avail).includes(qi)) return '<td class="na">·</td>';
+            if (q.keeper === k.name) return '<td class="gk">GK</td>';
+            return q.on.includes(k.name) ? '<td class="on">✓</td>' : '<td class="sub">Sub</td>';
+          }).join('')}<td class="mins">${t.played.get(k.name) * MD.half}</td></tr>`).join('')}</tbody>
+        </table></div></div>`).join('')}
+    <p class="small-note">✓ playing, GK in goal, Sub on the bench, · not there.</p>
+    <div class="share-row" style="margin-top:12px"><button type="button" class="wa" data-act="lineupwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="lineupcopy">Copy</button></div>
+    <button type="button" class="swap" data-act="shuffle" style="margin-top:12px">Shuffle the two teams</button>`;
+  box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
+}
+
+function matchAction(act) {
+  const squad = MD.squads[MD.squad];
+  if (act === 'askwa') openWhatsApp(availabilityMessage(MD.squad));
+  if (act === 'askcopy') copyText(availabilityMessage(MD.squad));
+  if (act === 'read') {
+    MD.paste = $('#mdPaste').value;
+    const list = parseReplies(MD.paste);
+    if (!list.length) { saveMD(); toast('No names found under the headings. Check the paste.'); return; }
+    mergeReplies(list); renderMatch(); toast(`Read ${plural(list.length, 'name')}`);
+  }
+  if (act === 'add') {
+    const inp = $('#mdName'), name = inp.value.trim();
+    if (name) { squad.push({ name, avail: '?' }); saveMD(); renderMatch(); $('#mdName').focus(); }
+  }
+  if (act === 'reset') { squad.forEach(k => { k.avail = '?'; }); MD.paste = ''; MD_RESULT = null; saveMD(); renderMatch(); toast('Ready for a new week'); }
+  if (act === 'plan' || act === 'shuffle') {
+    if (act === 'shuffle') MD.seed = (MD.seed * 7 + 13) % 100003;
+    const playing = squad.filter(k => quartersFor(k.avail).length);
+    if (!playing.length) { toast('Mark who can play first'); return; }
+    MD_RESULT = { squad: MD.squad, res: allocate(squad, MD.size, MD.seed) };
+    saveMD(); renderResult();
+    $('#mdResult').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+  }
+  if (act === 'lineupwa') openWhatsApp(lineupText(MD_RESULT.res));
+  if (act === 'lineupcopy') copyText(lineupText(MD_RESULT.res));
+}
+
+function bindMatch() {
+  const v = $('#view-match');
+  v.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
+  v.querySelectorAll('[data-squad]').forEach(b => b.onclick = () => { MD.squad = b.dataset.squad; MD.paste = ''; saveMD(); renderMatch(); });
+  v.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => {
+    const k = MD.squads[MD.squad][+b.dataset.kid];
+    k.avail = k.avail === b.dataset.av ? '?' : b.dataset.av; saveMD();
+    const row = b.closest('.kid');
+    row.querySelectorAll('[data-av]').forEach(x => x.setAttribute('aria-pressed', x.dataset.av === k.avail));
+    row.classList.toggle('unk', k.avail === '?');
+  });
+  v.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { MD.squads[MD.squad].splice(+b.dataset.del, 1); saveMD(); renderMatch(); });
+  v.querySelectorAll('[data-md]').forEach(b => b.onclick = () => {
+    const k = b.dataset.md, lim = k === 'half' ? [5, 30] : [3, 7];
+    MD[k] = clamp(MD[k] + +b.dataset.d, lim[0], lim[1]); saveMD(); renderMatch();
+  });
+  $('#mdPaste').addEventListener('input', e => { MD.paste = e.target.value; saveMD(); });
+  $('#mdName').addEventListener('keydown', e => { if (e.key === 'Enter') matchAction('add'); });
+}
+const WA_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.4-.3z"/></svg>';
+</script>
+</body>
+</html>
