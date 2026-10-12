@@ -207,6 +207,11 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .fixture .frow b{display:block;font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
 .maplink{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:12px;background:#E8F0FE;color:#0F4FA8;font-weight:900;text-decoration:none}
 .maplink svg{width:20px;height:20px}
+.mapbox{border-radius:12px;overflow:hidden;background:#DDE5D6;aspect-ratio:16/10}
+.mapbox iframe{display:block;width:100%;height:100%;border:0}
+.venues{align-items:center;gap:6px}
+.settings-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;min-height:52px;border:2px solid var(--line);border-radius:14px;background:var(--card);padding:0 16px;font-weight:900;font-size:18px}
+.settings h3{font-size:17px;font-weight:900;margin:20px 0 8px}
 .chip.squad-Reds[aria-pressed="true"]{background:#C8102E;border-color:#C8102E}
 .chip.squad-Greens[aria-pressed="true"]{background:#0F7B3F;border-color:#0F7B3F}
 @media (max-width:440px){ .brand-name{display:none} }
@@ -1236,8 +1241,8 @@ D({ id: 'line1v1', name: '1v1: Stop It on the Line', role: 's', focus: ['1v1', '
   }
 });
 
-D({ id: 'twogates1v1', name: '1v1 Two Gates', role: 's', focus: ['1v1', 'dribbling', 'turning'], int: 3, dur: [6, 10], min: 2, max: 12, ball: 'half', cones: [8, 0], bibs: 'team',
-  setup: ['Mark a box about 15 × 12 big steps per pair.', 'Put 2 little gates on each end line, one near each corner.', 'One ball per pair.'],
+D({ id: 'twogates1v1', name: '1v1 Two Gates', role: 's', focus: ['1v1', 'dribbling', 'turning'], int: 3, dur: [6, 10], min: 2, max: 12, ball: 'half', cones: [0, 4], bibs: 'team',
+  setup: ['Mark a box about 15 × 12 big steps for each pair, side by side.', 'Put 2 little gates on each end line, one near each corner.', 'One ball per pair.'],
   how: 'Attacker scores by dribbling through either gate on the far end. The defender can only protect one gate at a time, so fake to one and go to the other.',
   pts: ['Look at both gates: which is open?', 'Fake with your body and eyes', 'Change of speed after the fake'],
   easy: 'Bigger gates.', hard: 'After scoring, the attacker must turn and get back through a gate at the start end.',
@@ -1264,7 +1269,7 @@ D({ id: 'shield', name: 'Shield the Treasure', role: 's w', focus: ['possession'
   }
 });
 
-D({ id: 'shadow', name: 'Show Them the Line', role: 's', focus: ['defending', '1v1', 'speed'], int: 2, dur: [6, 10], min: 2, max: 12, ball: 'half', cones: [4, 1], bibs: 'team',
+D({ id: 'shadow', name: 'Show Them the Line', role: 's', focus: ['defending', '1v1', 'speed'], int: 2, dur: [6, 10], min: 2, max: 12, ball: 'half', cones: [0, 4], bibs: 'team',
   setup: ['Make a channel about 20 × 10 big steps per pair, with a 2-cone gate in the middle of each end.', 'One ball per pair: attacker at one end, defender at the other.'],
   how: 'The attacker tries to dribble through the far gate. The defender gets close, stands side-on and steers them towards the sideline, then wins the ball. Swap every go.',
   pts: ['Get close fast, then slow down', 'Side-on, knees bent, on your toes', 'Wait for a heavy touch, then pounce'],
@@ -1301,7 +1306,7 @@ D({ id: 'castle', name: 'Defend the Castle', role: 's', focus: ['defending', 'pa
   }
 });
 
-D({ id: 'twovone', name: '2v1 Breakout', role: 's', focus: ['1v1', 'passing', 'teamwork'], int: 3, dur: [6, 10], min: 3, max: 9, ball: 'third', cones: [6, 0], bibs: 'team',
+D({ id: 'twovone', name: '2v1 Breakout', role: 's', focus: ['1v1', 'passing', 'teamwork'], int: 3, dur: [6, 10], min: 3, max: 9, ball: 'third', cones: [0, 2], bibs: 'team',
   setup: ['Make a box about 20 × 12 big steps with a small goal (or cone goal) at one end.', 'Groups of 3: two attackers with a ball, one defender in front of the goal.'],
   how: 'The two attackers try to score. Draw the defender towards you, then pass to your teammate, or go past if the defender covers the pass. Rotate so everyone defends.',
   pts: ['Dribble straight at the defender', 'Pass when the defender commits to you', 'Teammate: stay wide and level, call for it'],
@@ -1700,12 +1705,14 @@ function groupList(k, st, P) {
    ========================================================= */
 
 /* What a drill needs for n players: areas side by side, balls, cones, bibs */
-function needs(d, n, minAreas = 1) {
-  const areas = Math.max(minAreas, Math.ceil(n / d.max)), per = n / areas, b = d.ball;
+function needs(d, n, minAreas = 1, maxAreas = 99) {
+  let areas = Math.max(minAreas, Math.ceil(n / d.max)), squeezed = false;
+  if (areas > maxAreas) { areas = Math.max(minAreas, maxAreas); squeezed = true; }   // not enough room: fewer, bigger groups
+  const per = n / areas, b = d.ball;
   const balls = b === 'each' ? n : b === 'half' ? Math.ceil(n / 2) : b === 'third' ? Math.ceil(n / 3) : (b || 0) * areas;
   const cones = areas * d.cones[0] + Math.ceil(d.cones[1] * n);
   const bibs = d.bibs === 'team' ? Math.floor(n / 2) : d.bibs === 'few' ? areas * Math.max(1, Math.round(per / 5)) : 0;
-  return { areas, per, balls, cones, bibs, ok: n >= d.min && per >= d.min };
+  return { areas, per, balls, cones, bibs, ok: n >= d.min && per >= d.min && (!squeezed || per <= d.max * 1.3) };
 }
 
 /* Numbers for the plan: the middle of each range, sensible defaults when blank */
@@ -1751,7 +1758,7 @@ function pickDrill(o) {
   const tiers = [[], [], [], []];   // 0 fits everything, 1 short of cones, 2 short of balls, 3 group-size mismatch
   for (const d of DRILLS) {
     if (!d.role.includes(o.role) || o.exclude.has(d.id)) continue;
-    const nd = needs(d, o.n, o.minAreas || 1);
+    const nd = needs(d, o.n, o.minAreas || 1, o.maxAreas || 99);
     if (d.bibReq && (o.bibs == null || nd.bibs > o.bibs)) continue;
     let tier = 0;
     if (!nd.ok) tier = 3;
@@ -1796,50 +1803,52 @@ function buildPlan(st, seed) {
   const tm = timing(st.length - AR, stations + 2, notes, AR > 0);
   const uncovered = new Set(st.focus), used = new Set(), usedPrimary = new Set(), relaxed = new Set();
   const slots = [], blocks = [], phases = [];
-  const take = (role, n, lo, hi, mins, ballsLeft, minAreas) => {
-    const base = { role, n, lo, hi, mins, ballsLeft, cones: null, bibs: N.bibs, uncovered, usedPrimary, rand, minAreas };
+  const take = (role, n, lo, hi, mins, ballsLeft, minAreas, maxAreas) => {
+    const base = { role, n, lo, hi, mins, ballsLeft, cones: null, bibs: N.bibs, uncovered, usedPrimary, rand, minAreas, maxAreas };
     let r = pickDrill(Object.assign({ exclude: used }, base));
     if (!r) r = pickDrill(Object.assign({ exclude: new Set() }, base));     // whole catalogue used: allow a repeat
     used.add(r.d.id); usedPrimary.add(r.d.focus[0]); r.d.focus.forEach(f => uncovered.delete(f));
     if (r.relaxed && role !== 'a') relaxed.add(r.relaxed);
     return r;
   };
+  const NP = st.pitches || 2, wholeMax = 2 * NP;          // whole squad: at most two areas per pitch
   let t = 0;
   if (AR) {
     const minA = st.squads ? 2 : 1;
-    const a = take('a', N.P, N.Plo, N.Phi, AR, N.balls, minA);
+    const a = take('a', N.P, N.Plo, N.Phi, AR, N.balls, minA, Math.max(minA, wholeMax));
     phases.push([slots.length]);
-    slots.push({ role: 'a', d: a.d, nd: a.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: AR, start: 0, end: AR, block: -1, minAreas: minA });
+    slots.push({ role: 'a', d: a.d, nd: a.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: AR, start: 0, end: AR, block: -1, minAreas: minA, maxAreas: Math.max(minA, wholeMax) });
     t = AR;
   }
   if (!AR) {                                  // no arrivals opener: a normal warm-up instead
-    const w = take('w', N.P, N.Plo, N.Phi, tm.W, N.balls);
+    const w = take('w', N.P, N.Plo, N.Phi, tm.W, N.balls, 1, wholeMax);
     phases.push([slots.length]);
-    slots.push({ role: 'w', d: w.d, nd: w.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.W, start: t, end: t + tm.W, block: -1 });
+    slots.push({ role: 'w', d: w.d, nd: w.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.W, start: t, end: t + tm.W, block: -1, maxAreas: wholeMax });
     t += tm.W;
   }
   const cap = Math.max(1, Math.min(N.C, Math.floor(N.P / 3)));
   splitBlocks(tm.M, cap).forEach((k, bi) => {
     const n = Math.ceil(N.P / k), lo = Math.floor(N.Plo / k), hi = Math.ceil(N.Phi / k);
+    const perPitch = Math.ceil(k / NP), stMax = perPitch >= 3 ? 1 : perPitch === 2 ? 2 : 4;
     const blk = { k, R: tm.R, start: t, end: t + k * tm.R, group: N.P / k, slots: [] };
     let left = N.balls;
     const picks = [];
     for (let s = 0; s < k; s++) {
-      const r = take('s', n, lo, hi, tm.R, Math.max(0, left));
+      const r = take('s', n, lo, hi, tm.R, Math.max(0, left), 1, stMax);
       left -= r.nd.balls;
-      picks.push(r);
+      picks.push(Object.assign(r, { stMax }));
     }
     /* smallest set-ups first: with an odd number of stations the biggest one gets a pitch to itself */
     picks.sort((a, b) => a.nd.areas - b.nd.areas).forEach((r, s) => {
       blk.slots.push(slots.length);
-      slots.push({ role: 's', d: r.d, nd: r.nd, n, lo, hi, mins: tm.R, start: t, end: blk.end, block: bi, station: s, k });
+      slots.push({ role: 's', d: r.d, nd: r.nd, n, lo, hi, mins: tm.R, start: t, end: blk.end, block: bi, station: s, k, maxAreas: r.stMax });
     });
     blocks.push(blk); phases.push(blk.slots.slice());
     t = blk.end;
   });
-  const g = take('g', N.P, N.Plo, N.Phi, tm.G, N.balls);
+  const g = take('g', N.P, N.Plo, N.Phi, tm.G, N.balls, 1, wholeMax);
   phases.push([slots.length]);
-  slots.push({ role: 'g', d: g.d, nd: g.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.G, start: t, end: t + tm.G, block: -1 });
+  slots.push({ role: 'g', d: g.d, nd: g.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.G, start: t, end: t + tm.G, block: -1, maxAreas: wholeMax });
 
   if (relaxed.has('balls')) notes.push(`Some drills need more balls than you have (${N.balls}), so players share where needed.`);
   if (relaxed.has('size')) notes.push('With these numbers some drills run with smaller groups than ideal; a coach can join in to make up numbers.');
@@ -1876,7 +1885,7 @@ function swapSlot(i) {
   sl.tried = sl.tried || new Set([sl.d.id]);
   let ballsLeft = N.balls;
   if (sl.role === 's') PLAN.blocks[sl.block].slots.forEach(j => { if (j !== i) ballsLeft -= PLAN.slots[j].nd.balls; });
-  const base = { role: sl.role, n: sl.n, lo: sl.lo, hi: sl.hi, mins: sl.mins, ballsLeft: Math.max(0, ballsLeft), cones: null, bibs: N.bibs, minAreas: sl.minAreas || 1,
+  const base = { role: sl.role, n: sl.n, lo: sl.lo, hi: sl.hi, mins: sl.mins, ballsLeft: Math.max(0, ballsLeft), cones: null, bibs: N.bibs, minAreas: sl.minAreas || 1, maxAreas: sl.maxAreas || 99,
     like: sl.d, rand: Math.random, strict: true };
   const inPlan = new Set(PLAN.slots.map(s => s.d.id));
   let r = pickDrill(Object.assign({ exclude: new Set([...inPlan, ...sl.tried]) }, base));
@@ -2372,12 +2381,13 @@ const API = 'https://script.google.com/macros/s/AKfycbyqVWI2oOrU_SyXriPu8-bIgVEg
 const PARENTS_URL = 'https://doles05.github.io/training-tonight/parents.html';
 const SQUAD_LABEL = { Reds: 'Red squad', Greens: 'Green squad' };
 const MD_KEY = 'trainingTonight.matchday.v2', PIN_KEY = 'trainingTonight.pin';
-let MD = { squad: 'Reds', half: 10, size: 5, seed: 1, avail: { Reds: {}, Greens: {} } };
+let MD = { squad: 'Reds', half: 12, size: 5, seed: 1, avail: { Reds: {}, Greens: {} }, v: 3 };
 try { const s = JSON.parse(localStorage.getItem(MD_KEY) || 'null'); if (s && s.avail) MD = Object.assign(MD, s); } catch (e) { /* first visit */ }
+if (MD.v !== 3) { MD.half = 12; MD.size = 5; MD.v = 3; }
 function saveMD() { try { localStorage.setItem(MD_KEY, JSON.stringify(MD)); } catch (e) { /* storage blocked */ } }
 let PIN = ''; try { PIN = localStorage.getItem(PIN_KEY) || ''; } catch (e) { /* storage blocked */ }
 let BOX = { loaded: false, loading: false, error: '', info: {}, answers: [] };
-let MD_RESULT = null, EDIT_NAMES = false;
+let MD_RESULT = null, EDIT_NAMES = false, EDIT_FIX = false, SHOW_LIST = false, SHOW_SETTINGS = false;
 const AV = [['full', 'Full'], ['first', '1st half'], ['second', '2nd half'], ['out', 'Out']];
 const PERIODS = ['Match 1, 1st half', 'Match 1, 2nd half', 'Match 2, 1st half', 'Match 2, 2nd half'];
 const PERIOD_SHORT = ['M1 1st', 'M1 2nd', 'M2 1st', 'M2 2nd'];
@@ -2411,7 +2421,10 @@ function fixtureFor(sq) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   return new Date(f.date + 'T23:59:00') >= today ? f : null;
 }
-const mapUrl = f => f.map && /^https?:\/\//.test(f.map) ? f.map : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(f.venue || '');
+const placeQuery = f => [f.venue, f.eircode].filter(Boolean).join(', ');
+const mapUrl = f => f.map && /^https?:\/\//.test(f.map) ? f.map : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(placeQuery(f));
+const embedUrl = q => 'https://maps.google.com/maps?q=' + encodeURIComponent(q) + '&z=15&output=embed';
+const mapFrame = q => q ? `<div class="mapbox"><iframe title="Map of ${esc(q)}" src="${esc(embedUrl(q))}" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>` : '';
 const dateText = iso => { const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' }); };
 const PIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.6" fill="currentColor"/></svg>';
 
@@ -2420,7 +2433,8 @@ function fixtureCard(sq, f) {
     <div class="vs">v ${esc(f.opp || 'Opposition to be confirmed')}</div>
     ${f.venue ? `<div class="venue">${esc(f.venue)}</div>` : ''}
     <div class="frow">${f.meet ? `<div><b>Meet</b>${esc(f.meet)}</div>` : ''}${f.ko ? `<div><b>Kick-off</b>${esc(f.ko)}</div>` : ''}</div>
-    ${f.venue || f.map ? `<a class="maplink" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</div>`;
+    ${placeQuery(f) ? mapFrame(placeQuery(f)) : ''}
+    ${placeQuery(f) || f.map ? `<a class="maplink" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</div>`;
 }
 /* The WhatsApp message for parents: the fixture plus the link */
 function parentsMessage(sq) {
@@ -2428,10 +2442,10 @@ function parentsMessage(sq) {
   if (f) {
     L.push(`${sq === 'Greens' ? '🟢' : '🔴'} *${SQUAD_LABEL[sq].toUpperCase()} FIXTURE* - ${dateText(f.date)}`, '');
     if (f.opp) L.push(`Opposition: ${f.opp}`);
-    if (f.venue) L.push(`Venue: ${f.venue}`);
+    if (f.venue) L.push(`Venue: ${f.venue}${f.eircode ? ' (' + f.eircode + ')' : ''}`);
     if (f.meet) L.push(`Meeting time: ${f.meet}`);
     if (f.ko) L.push(`Kick-off: ${f.ko}`);
-    if (f.venue || f.map) L.push(`Map: ${mapUrl(f)}`);
+    if (placeQuery(f) || f.map) L.push(`Map: ${mapUrl(f)}`);
     L.push('');
   }
   L.push('Can your son play? Tap here and pick his name:', PARENTS_URL);
@@ -2474,7 +2488,7 @@ function allocate(kids, size, seed) {
 function lineupText(res) {
   const sq = MD_RESULT.squad, f = fixtureFor(sq);
   const L = [`⚽ *${SQUAD_LABEL[sq]}: Saturday game time* (halves of ${MD.half} min)`];
-  if (f) { L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}${f.meet ? '. Meet ' + f.meet : ''}${f.ko ? ', kick-off ' + f.ko : ''}`); if (f.venue || f.map) L.push(mapUrl(f)); }
+  if (f) { L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}${f.meet ? '. Meet ' + f.meet : ''}${f.ko ? ', kick-off ' + f.ko : ''}`); if (placeQuery(f) || f.map) L.push(mapUrl(f)); }
   res.teams.forEach((t, ti) => {
     L.push('', `*${sq} ${ti + 1}*`);
     t.quarters.forEach((q, i) => {
@@ -2491,59 +2505,72 @@ function lineupText(res) {
 function kidsFor(sq) { return squadNames(sq).map(name => ({ name, avail: MD.avail[sq][name] || '?' })); }
 
 function renderMatch() {
-  const v = $('#view-match'), sq = MD.squad, names = squadNames(sq), f = BOX.info['fixture:' + sq] || {};
+  const v = $('#view-match'), sq = MD.squad, names = squadNames(sq), f = BOX.info['fixture:' + sq] || {}, live = fixtureFor(sq);
   const kids = kidsFor(sq), counts = { full: 0, first: 0, second: 0, out: 0, '?': 0 };
   kids.forEach(k => counts[k.avail]++);
-  const fdate = f.date && fixtureFor(sq) ? f.date : nextSaturday();
+  const fdate = f.date && live ? f.date : nextSaturday();
+  const showForm = EDIT_FIX || !live;
+  const summary = names.length
+    ? `${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} out${counts['?'] ? `, <b>${counts['?']} not in yet</b>` : ''}.`
+    : 'No names yet: add them under Settings at the bottom.';
   v.innerHTML = `
     <div class="plan-top"><h1>Saturday matches</h1>
-      <p class="sum">${BOX.loading ? 'Loading from your sheet…' : BOX.error ? '' : 'Saved in your Google Sheet, so every coach sees the same.'}</p></div>
+      ${BOX.loading ? '<p class="sum">Loading…</p>' : ''}</div>
     ${BOX.error ? `<ul class="notes"><li>${esc(BOX.error)}</li></ul>` : ''}
     <div class="chips" style="margin-top:14px">${['Reds', 'Greens'].map(s => `<button type="button" class="chip squad-${s}" data-squad="${s}" aria-pressed="${sq === s}">${SQUAD_LABEL[s]}</button>`).join('')}
       <button type="button" class="chip" data-act="refresh" style="margin-left:auto">${BOX.loading ? 'Loading…' : 'Refresh'}</button></div>
 
-    ${fixtureFor(sq) ? `<div class="panel">${fixtureCard(sq, fixtureFor(sq))}</div>` : ''}
-
     <div class="panel"><h2>This week's match</h2>
+      ${showForm ? `
       <div class="form">
         <label>Date<input type="date" id="fxDate" value="${esc(fdate)}"></label>
         <label>Opposition<input type="text" id="fxOpp" value="${esc(f.opp || '')}" placeholder="e.g. Enniskerry" autocomplete="off"></label>
         <label>Venue<input type="text" id="fxVenue" value="${esc(f.venue || '')}" placeholder="e.g. Hudson Park, Glasthule" autocomplete="off"></label>
+        ${(BOX.info.venues || []).length ? `<div class="chips venues"><span class="opt-l">Used before:</span>${BOX.info.venues.map((vn, i) => `<button type="button" class="chip small" data-venue="${i}">${esc(vn.venue)}</button>`).join('')}</div>` : ''}
+        <label>Eircode <span class="opt-l">(optional, for an exact pin)</span><input type="text" id="fxEir" value="${esc(f.eircode || '')}" placeholder="e.g. A96 XXXX" autocomplete="off" autocapitalize="characters"></label>
+        <div id="fxMapPreview">${mapFrame(placeQuery({ venue: f.venue, eircode: f.eircode }))}</div>
         <div class="two"><label>Meet<input type="time" id="fxMeet" value="${esc(f.meet || '')}"></label><label>Kick-off<input type="time" id="fxKo" value="${esc(f.ko || '')}"></label></div>
-        <label>Google Maps link <span class="opt-l">(optional, for an exact pin)</span><input type="url" id="fxMap" value="${esc(f.map || '')}" placeholder="Paste a maps link, or leave blank" autocomplete="off"></label>
       </div>
-      <button type="button" class="swap" data-act="savefix" style="margin-top:12px">Save ${esc(SQUAD_LABEL[sq].toLowerCase())} match</button></div>
+      <button type="button" class="swap" data-act="savefix" style="margin-top:12px">Save match</button>
+      ${live ? '<button type="button" class="back" data-act="cancelfix">Cancel</button>' : ''}`
+      : `${fixtureCard(sq, live)}<button type="button" class="back" data-act="editfix">Edit match details</button>`}
+    </div>
 
     <div class="panel"><h2>Send to parents</h2>
-      <p>One message with the match details, the map and the link where parents pick their son and how long he can play.</p>
       <div class="share-row"><button type="button" class="wa" data-act="askwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="askcopy">Copy</button></div></div>
 
-    <div class="panel"><h2>${esc(SQUAD_LABEL[sq])} names <span class="count">${names.length}</span></h2>
-      ${EDIT_NAMES || !names.length ? `
-        <p>One name per line (or separated by commas). Use the name parents will recognise, e.g. "Jack D".</p>
-        <textarea id="namesBox" rows="10" placeholder="Jack D&#10;Sam O'Brien&#10;Luca">${esc(names.join('\n'))}</textarea>
-        <button type="button" class="swap" data-act="savenames" style="margin-top:10px">Save names</button>
-        ${names.length ? '<button type="button" class="back" data-act="canceledit">Cancel</button>' : ''}`
-      : `<p>${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} out${counts['?'] ? `, ${counts['?']} not marked` : ''}. For now, tap each boy's answer here; next stage these fill in from parents automatically.</p>
+    <div class="panel"><h2>Replies</h2>
+      <p>${summary}</p>
+      ${names.length ? `<button type="button" class="back" data-act="togglelist">${SHOW_LIST ? 'Hide names' : 'Show names'}</button>` : ''}
+      ${SHOW_LIST && names.length ? `
         <div class="kids">${kids.map(k => `
           <div class="kid${k.avail !== '?' ? '' : ' unk'}"><span class="kname">${esc(k.name)}</span>
             <div class="seg">${AV.map(([a, l]) => `<button type="button" data-kid="${esc(k.name)}" data-av="${a}" aria-pressed="${k.avail === a}">${l}</button>`).join('')}</div></div>`).join('')}</div>
-        <button type="button" class="back" data-act="editnames">Edit names</button>
-        <button type="button" class="back" data-act="reset" style="margin-left:14px">Clear answers</button>`}
+        <button type="button" class="back" data-act="reset">Clear answers</button>` : ''}
     </div>
 
-    <div class="panel"><h2>Game settings</h2>
+    <button type="button" class="go" data-act="plan">Generate game time</button>
+    <div id="mdResult"></div>
+
+    <div class="panel settings">
+      <button type="button" class="settings-toggle" data-act="togglesettings" aria-expanded="${SHOW_SETTINGS}">Settings <span aria-hidden="true">${SHOW_SETTINGS ? '▲' : '▼'}</span></button>
+      ${SHOW_SETTINGS ? `
+      <h3>Game</h3>
       <div class="md-set">
         <div><b>Half length</b><div class="mini"><button type="button" data-md="half" data-d="-1" aria-label="Shorter halves">−</button><span>${MD.half} min</span><button type="button" data-md="half" data-d="1" aria-label="Longer halves">+</button></div></div>
         <div><b>Players per team</b><div class="mini"><button type="button" data-md="size" data-d="-1" aria-label="Fewer per team">−</button><span>${MD.size}</span><button type="button" data-md="size" data-d="1" aria-label="More per team">+</button></div></div>
-      </div></div>
-
-    <div class="panel"><h2>Coach PIN</h2>
-      <p>${PIN ? 'Saved on this phone. Needed to save names and match details.' : 'Enter the PIN from your Google Sheet code once. It stays on this phone.'}</p>
-      <div class="addkid"><input id="pinBox" type="password" inputmode="numeric" placeholder="${PIN ? '••••' : 'PIN'}" autocomplete="off"><button type="button" class="chip" data-act="savepin">${PIN ? 'Change' : 'Save'}</button></div></div>
-
-    <button type="button" class="go" data-act="plan">Generate game time</button>
-    <div id="mdResult"></div>`;
+      </div>
+      <h3>${esc(SQUAD_LABEL[sq])} names <span class="count">${names.length}</span></h3>
+      ${EDIT_NAMES || !names.length ? `
+        <p>One name per line (or separated by commas), as parents will recognise them, e.g. "Jack D".</p>
+        <textarea id="namesBox" rows="10" placeholder="Jack D&#10;Sam O'Brien&#10;Luca">${esc(names.join('\n'))}</textarea>
+        <button type="button" class="swap" data-act="savenames" style="margin-top:10px">Save names</button>
+        ${names.length ? '<button type="button" class="back" data-act="canceledit">Cancel</button>' : ''}`
+      : `<button type="button" class="back" data-act="editnames">Edit names</button>`}
+      <h3>Coach PIN</h3>
+      <p>${PIN ? 'Saved on this device.' : 'Only needed to save names and match details. Enter it once per device.'}</p>
+      <div class="addkid"><input id="pinBox" type="password" inputmode="numeric" placeholder="${PIN ? '••••' : 'PIN'}" autocomplete="off"><button type="button" class="chip" data-act="savepin">${PIN ? 'Change' : 'Save'}</button></div>` : ''}
+    </div>`;
   bindMatch();
   if (MD_RESULT && MD_RESULT.squad === MD.squad) renderResult();
 }
@@ -2579,10 +2606,22 @@ async function matchAction(act) {
   if (act === 'askcopy') copyText(parentsMessage(sq));
   if (act === 'savepin') { const p = $('#pinBox').value.trim(); if (p) { PIN = p; try { localStorage.setItem(PIN_KEY, p); } catch (e) {} toast('PIN saved on this phone'); renderMatch(); } }
   if (act === 'savefix') {
-    const val = { date: $('#fxDate').value, opp: $('#fxOpp').value.trim(), venue: $('#fxVenue').value.trim(), meet: $('#fxMeet').value, ko: $('#fxKo').value, map: $('#fxMap').value.trim() };
-    if (await boxSet('fixture:' + sq, val)) { toast('Match saved: parents will see it'); renderMatch(); }
+    const venue = $('#fxVenue').value.trim(), eircode = $('#fxEir').value.trim().toUpperCase();
+    const val = { date: $('#fxDate').value, opp: $('#fxOpp').value.trim(), venue, eircode, meet: $('#fxMeet').value, ko: $('#fxKo').value };
+    if (await boxSet('fixture:' + sq, val)) {
+      if (venue) {                                   // remember the venue for next time
+        const list = (BOX.info.venues || []).filter(x => x.venue.toLowerCase() !== venue.toLowerCase());
+        list.unshift({ venue, eircode });
+        await boxSet('venues', list.slice(0, 12));
+      }
+      EDIT_FIX = false; toast('Match saved: parents will see it'); renderMatch();
+    }
   }
   if (act === 'editnames') { EDIT_NAMES = true; renderMatch(); }
+  if (act === 'editfix') { EDIT_FIX = true; renderMatch(); }
+  if (act === 'cancelfix') { EDIT_FIX = false; renderMatch(); }
+  if (act === 'togglelist') { SHOW_LIST = !SHOW_LIST; renderMatch(); }
+  if (act === 'togglesettings') { SHOW_SETTINGS = !SHOW_SETTINGS; renderMatch(); }
   if (act === 'canceledit') { EDIT_NAMES = false; renderMatch(); }
   if (act === 'savenames') {
     const list = [...new Set($('#namesBox').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean))];
@@ -2606,7 +2645,7 @@ async function matchAction(act) {
 function bindMatch() {
   const v = $('#view-match');
   v.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
-  v.querySelectorAll('[data-squad]').forEach(b => b.onclick = () => { MD.squad = b.dataset.squad; EDIT_NAMES = false; saveMD(); renderMatch(); });
+  v.querySelectorAll('[data-squad]').forEach(b => b.onclick = () => { MD.squad = b.dataset.squad; EDIT_NAMES = false; EDIT_FIX = false; saveMD(); renderMatch(); });
   v.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => {
     const sq = MD.squad, n = b.dataset.kid, cur = MD.avail[sq][n];
     if (cur === b.dataset.av) delete MD.avail[sq][n]; else MD.avail[sq][n] = b.dataset.av;
@@ -2614,6 +2653,13 @@ function bindMatch() {
     const row = b.closest('.kid'), now = MD.avail[sq][n] || '?';
     row.querySelectorAll('[data-av]').forEach(x => x.setAttribute('aria-pressed', x.dataset.av === now));
     row.classList.toggle('unk', now === '?');
+  });
+  const vIn = $('#fxVenue'), eIn = $('#fxEir');
+  let mapT = 0;
+  const preview = () => { clearTimeout(mapT); mapT = setTimeout(() => { const box = $('#fxMapPreview'); if (box) box.innerHTML = mapFrame(placeQuery({ venue: vIn.value.trim(), eircode: eIn.value.trim() })); }, 700); };
+  if (vIn && eIn) { vIn.addEventListener('input', preview); eIn.addEventListener('input', preview); }
+  v.querySelectorAll('[data-venue]').forEach(b => b.onclick = () => {
+    const vn = BOX.info.venues[+b.dataset.venue]; vIn.value = vn.venue; eIn.value = vn.eircode || ''; preview();
   });
   v.querySelectorAll('[data-md]').forEach(b => b.onclick = () => {
     const k = b.dataset.md, lim = k === 'half' ? [5, 30] : [3, 7];

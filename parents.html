@@ -39,6 +39,8 @@ h2{margin:0 0 10px;font-size:17px;font-weight:900}
 .fixture .venue{font-weight:700}
 .map{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:12px;background:#E8F0FE;color:#0F4FA8;font-weight:900;text-decoration:none}
 .map svg{width:20px;height:20px}
+.mapbox{border-radius:12px;overflow:hidden;background:#DDE5D6;aspect-ratio:16/10}
+.mapbox iframe{display:block;width:100%;height:100%;border:0}
 .muted{color:var(--ink2);font-size:15px;margin:0}
 .send{width:100%;min-height:62px;border:0;border-radius:16px;background:var(--bib);color:var(--ink);font-size:22px;font-weight:900;box-shadow:0 3px 0 #C9A21A}
 .send:disabled{background:#E3E7DD;color:#6B7686;box-shadow:none}
@@ -64,7 +66,9 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&a
 let INFO = {}, st = { squad: null, kid: null, avail: null, sending: false, sent: null, error: '' };
 try { st.squad = localStorage.getItem('tt.parent.squad'); } catch (e) {}
 
-function mapUrl(f) { return f.map && /^https?:\/\//.test(f.map) ? f.map : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(f.venue || ''); }
+const placeQuery = f => [f.venue, f.eircode].filter(Boolean).join(', ');
+function mapUrl(f) { return f.map && /^https?:\/\//.test(f.map) ? f.map : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(placeQuery(f)); }
+const embedUrl = q => 'https://maps.google.com/maps?q=' + encodeURIComponent(q) + '&z=15&output=embed';
 function dateText(iso) { const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' }); }
 function fixtureFor(sq) {
   const f = INFO['fixture:' + sq];
@@ -86,7 +90,8 @@ function render() {
         <div class="vs">v ${esc(f.opp || 'Opposition to be confirmed')}</div>
         ${f.venue ? `<div class="venue">${esc(f.venue)}</div>` : ''}
         <div class="row">${f.meet ? `<div><b>Meet</b>${esc(f.meet)}</div>` : ''}${f.ko ? `<div><b>Kick-off</b>${esc(f.ko)}</div>` : ''}</div>
-        ${f.venue || f.map ? `<a class="map" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</section>`;
+        ${placeQuery(f) ? `<div class="mapbox"><iframe title="Map of ${esc(placeQuery(f))}" src="${esc(embedUrl(placeQuery(f)))}" loading="lazy"></iframe></div>` : ''}
+        ${placeQuery(f) || f.map ? `<a class="map" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</section>`;
     } else {
       h += `<p class="muted">Match details for this Saturday will appear here once the coaches add them.</p>`;
     }
