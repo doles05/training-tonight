@@ -211,6 +211,8 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .mapbox iframe{display:block;width:100%;height:100%;border:0}
 .venues{align-items:center;gap:6px}
 .settings-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;min-height:52px;border:2px solid var(--line);border-radius:14px;background:var(--card);padding:0 16px;font-weight:900;font-size:18px}
+.late h3{font-size:17px;font-weight:900;margin:16px 0 4px}
+.late .chips{margin:6px 0 4px}
 .settings h3{font-size:17px;font-weight:900;margin:20px 0 8px}
 .chip.squad-Reds[aria-pressed="true"]{background:#C8102E;border-color:#C8102E}
 .chip.squad-Greens[aria-pressed="true"]{background:#0F7B3F;border-color:#0F7B3F}
@@ -2381,9 +2383,10 @@ const API = 'https://script.google.com/macros/s/AKfycbyqVWI2oOrU_SyXriPu8-bIgVEg
 const PARENTS_URL = 'https://doles05.github.io/training-tonight/parents.html';
 const SQUAD_LABEL = { Reds: 'Red squad', Greens: 'Green squad' };
 const MD_KEY = 'trainingTonight.matchday.v2', PIN_KEY = 'trainingTonight.pin';
-let MD = { squad: 'Reds', half: 12, size: 5, seed: 1, avail: { Reds: {}, Greens: {} }, v: 3 };
+let MD = { squad: 'Reds', half: 12, size: 5, seed: 1, avail: { Reds: {}, Greens: {} }, guests: { Reds: [], Greens: [] }, v: 3 };
 try { const s = JSON.parse(localStorage.getItem(MD_KEY) || 'null'); if (s && s.avail) MD = Object.assign(MD, s); } catch (e) { /* first visit */ }
 if (MD.v !== 3) { MD.half = 12; MD.size = 5; MD.v = 3; }
+if (!MD.guests) MD.guests = { Reds: [], Greens: [] };
 function saveMD() { try { localStorage.setItem(MD_KEY, JSON.stringify(MD)); } catch (e) { /* storage blocked */ } }
 let PIN = ''; try { PIN = localStorage.getItem(PIN_KEY) || ''; } catch (e) { /* storage blocked */ }
 let BOX = { loaded: false, loading: false, error: '', info: {}, answers: [] };
@@ -2481,13 +2484,19 @@ async function saveFixture(sq, val) {
 }
 
 /* --- fair split of the four halves (kids stay with one team all morning) --- */
-function allocate(kids, size, seed) {
+function allocate(kids, size, seed, fixed) {
   const rand = rng(seed);
   const avail = kids.filter(k => quartersFor(k.avail).length);
   const order = avail.map(k => ({ k, r: rand() }))
     .sort((a, b) => quartersFor(a.k.avail).length - quartersFor(b.k.avail).length || a.r - b.r).map(o => o.k);
   const teams = [[], []], cnt = [[0, 0, 0, 0], [0, 0, 0, 0]];
+  /* late changes: boys already placed stay on their team */
+  const free = [];
   order.forEach(k => {
+    if (fixed && fixed.has(k.name)) { const t = fixed.get(k.name); teams[t].push(k); quartersFor(k.avail).forEach(x => cnt[t][x]++); }
+    else free.push(k);
+  });
+  free.forEach(k => {
     const q = quartersFor(k.avail), cost = t => q.reduce((a, x) => a + cnt[t][x], 0) * 10 + teams[t].length;
     const t = cost(0) < cost(1) ? 0 : cost(1) < cost(0) ? 1 : (rand() < .5 ? 0 : 1);
     teams[t].push(k); q.forEach(x => cnt[t][x]++);
@@ -2529,8 +2538,25 @@ function lineupText(res) {
   return L.join('\n');
 }
 
+/* redo the game time after a late change, keeping everyone on their team */
+function regenKeepingTeams(msg) {
+  const sq = MD.squad, fixed = new Map();
+  if (MD_RESULT && MD_RESULT.squad === sq) MD_RESULT.res.teams.forEach((t, ti) => t.kids.forEach(k => fixed.set(k.name, ti)));
+  MD_RESULT = { squad: sq, res: allocate(kidsFor(sq), MD.size, MD.seed, fixed) };
+  saveMD(); renderResult();
+  if (msg) toast(msg);
+}
+function teamOf(name) {
+  if (!MD_RESULT) return '';
+  const i = MD_RESULT.res.teams.findIndex(t => t.kids.some(k => k.name === name));
+  return i < 0 ? '' : `${MD_RESULT.squad} ${i + 1}`;
+}
+
 /* --- the Match tab --- */
-function kidsFor(sq) { return squadNames(sq).map(name => ({ name, avail: MD.avail[sq][name] || '?' })); }
+function kidsFor(sq) {
+  return squadNames(sq).map(name => ({ name, avail: MD.avail[sq][name] || '?' }))
+    .concat((MD.guests[sq] || []).map(name => ({ name, avail: MD.avail[sq][name] || 'full', guest: true })));
+}
 
 function renderMatch() {
   const v = $('#view-match'), sq = MD.squad, names = squadNames(sq), f = BOX.info['fixture:' + sq] || {}, live = fixtureFor(sq);
@@ -2605,6 +2631,7 @@ function renderMatch() {
 
 function renderResult() {
   const box = $('#mdResult'), res = MD_RESULT.res, sq = MD_RESULT.squad, f = fixtureFor(sq);
+  const all = kidsFor(sq), playing = all.filter(k => quartersFor(k.avail).length), notPlaying = all.filter(k => !quartersFor(k.avail).length);
   const notMarked = kidsFor(sq).filter(k => k.avail === '?').map(k => k.name);
   const notes = res.notes.slice();
   if (notMarked.length) notes.unshift(`${joinList(notMarked)} ${notMarked.length === 1 ? 'isn\u2019t' : 'aren\u2019t'} marked yet, so ${notMarked.length === 1 ? 'he\u2019s' : 'they\u2019re'} left out.`);
@@ -2623,8 +2650,25 @@ function renderResult() {
         </table></div></div>`).join('')}
     <p class="small-note">✓ playing, GK in goal, Sub on the bench, · not there.</p>
     <div class="share-row" style="margin-top:12px"><button type="button" class="wa" data-act="lineupwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="lineupcopy">Copy</button></div>
-    <button type="button" class="swap" data-act="shuffle" style="margin-top:12px">Shuffle the two teams</button>`;
+    <button type="button" class="swap" data-act="shuffle" style="margin-top:12px">Shuffle the two teams</button>
+    <div class="panel late"><h2>Late changes</h2>
+      <h3>Pulled out?</h3><p>Tap a name to take him out.</p>
+      <div class="chips">${playing.map(k => `<button type="button" class="chip small" data-out="${esc(k.name)}">${esc(k.name)} ✕</button>`).join('')}</div>
+      <h3>Late entry?</h3>
+      ${notPlaying.length ? `<p>Tap a name to add him for the full game.</p><div class="chips">${notPlaying.map(k => `<button type="button" class="chip small" data-in="${esc(k.name)}">+ ${esc(k.name)}</button>`).join('')}</div>` : ''}
+      <div class="addkid"><input id="guestName" type="text" placeholder="Someone not on the list" autocomplete="off"><button type="button" class="chip" data-act="addguest">Add</button></div>
+    </div>`;
   box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
+  box.querySelectorAll('[data-out]').forEach(b => b.onclick = () => {
+    const n = b.dataset.out, g = MD.guests[sq] || [];
+    if (g.includes(n)) MD.guests[sq] = g.filter(x => x !== n); else MD.avail[sq][n] = 'out';
+    regenKeepingTeams(`${n} taken out. Game time redone.`);
+  });
+  box.querySelectorAll('[data-in]').forEach(b => b.onclick = () => {
+    const n = b.dataset.in; MD.avail[sq][n] = 'full';
+    regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
+  });
+  const gi = $('#guestName'); if (gi) gi.addEventListener('keydown', e => { if (e.key === 'Enter') matchAction('addguest'); });
 }
 
 async function matchAction(act) {
@@ -2636,6 +2680,13 @@ async function matchAction(act) {
   if (act === 'savefix') {
     const val = formFixture() || { date: $('#fxDate').value, opp: '', venue: '', eircode: '', meet: '', ko: '' };
     if (await saveFixture(sq, val)) { EDIT_FIX = false; toast('Match saved: parents will see it'); renderMatch(); }
+  }
+  if (act === 'addguest') {
+    const n = ($('#guestName').value || '').trim();
+    if (!n) return;
+    if (kidsFor(sq).some(k => k.name.toLowerCase() === n.toLowerCase())) { toast(`${n} is already on the list: tap his name above`); return; }
+    MD.guests[sq] = (MD.guests[sq] || []).concat(n); MD.avail[sq][n] = 'full';
+    regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
   }
   if (act === 'editnames') { EDIT_NAMES = true; renderMatch(); }
   if (act === 'editfix') { EDIT_FIX = true; renderMatch(); }
@@ -2649,7 +2700,7 @@ async function matchAction(act) {
     all[sq] = list;
     if (await boxSet('squads', all)) { EDIT_NAMES = false; toast(`${plural(list.length, 'name')} saved`); renderMatch(); }
   }
-  if (act === 'reset') { MD.avail[sq] = {}; MD_RESULT = null; saveMD(); renderMatch(); toast('Answers cleared'); }
+  if (act === 'reset') { MD.avail[sq] = {}; MD.guests[sq] = []; MD_RESULT = null; saveMD(); renderMatch(); toast('Answers cleared'); }
   if (act === 'plan' || act === 'shuffle') {
     if (act === 'shuffle') MD.seed = (MD.seed * 7 + 13) % 100003;
     const kids = kidsFor(sq);

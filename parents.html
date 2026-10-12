@@ -20,7 +20,8 @@ h1{margin:0;font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1.1
 h2{margin:0 0 10px;font-size:17px;font-weight:900}
 .lead{margin:8px 0 0;color:var(--ink2)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.grid3 .opt{font-size:15px;line-height:1.2}
 .opt{min-height:48px;border-radius:12px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:16px;padding:8px 6px}
 .opt[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
 .sq{min-height:58px;border-radius:14px;font-size:20px;font-weight:900}
@@ -45,9 +46,10 @@ h2{margin:0 0 10px;font-size:17px;font-weight:900}
 .send{width:100%;min-height:62px;border:0;border-radius:16px;background:var(--bib);color:var(--ink);font-size:22px;font-weight:900;box-shadow:0 3px 0 #C9A21A}
 .send:disabled{background:#E3E7DD;color:#6B7686;box-shadow:none}
 .done{background:#DDF3E3;border-radius:16px;padding:16px 18px;display:grid;gap:8px}
-.done b{font-size:20px;color:#14532D}
+.done b{font-size:22px;line-height:1.25;color:#14532D}
 .done p{margin:0;color:#1F4D2E}
-.again{justify-self:start;min-height:44px;padding:0 16px;border-radius:12px;border:2px solid #14532D;background:#fff;color:#14532D;font-weight:800}
+.donebtns{display:flex;gap:8px;flex-wrap:wrap}
+.again{min-height:44px;padding:0 16px;border-radius:12px;border:2px solid #14532D;background:#fff;color:#14532D;font-weight:800}
 .err{background:#FFF3C4;border-radius:12px;padding:12px 14px}
 </style>
 </head>
@@ -64,7 +66,7 @@ const PIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-
 const app = document.getElementById('app');
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let INFO = {}, st = { squad: null, kid: null, avail: null, sending: false, sent: null, error: '' };
-try { st.squad = localStorage.getItem('tt.parent.squad'); } catch (e) {}
+try { st.squad = localStorage.getItem('tt.parent.squad'); st.kid = localStorage.getItem('tt.parent.kid'); } catch (e) {}
 
 const placeQuery = f => [f.venue, f.eircode].filter(Boolean).join(', ');
 function mapUrl(f) { return f.map && /^https?:\/\//.test(f.map) ? f.map : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(placeQuery(f)); }
@@ -79,25 +81,27 @@ function fixtureFor(sq) {
 
 function render() {
   const names = ((INFO.squads || {})[st.squad] || []).slice().sort((a, b) => a.localeCompare(b));
+  if (st.kid && !names.includes(st.kid)) st.kid = null;
   const f = st.squad ? fixtureFor(st.squad) : null;
   const label = st.squad ? SQUADS.find(s => s[0] === st.squad)[1] : '';
-  let h = `<div><h1>Can your son play on Saturday?</h1><p class="lead">Tap his squad, his name, and how long he can play.</p></div>`;
-  if (st.error) h += `<div class="err">${esc(st.error)}</div>`;
-  h += `<section><h2>1. Squad</h2><div class="grid2">${SQUADS.map(([k, l]) => `<button type="button" class="opt sq ${k}" data-squad="${k}" aria-pressed="${st.squad === k}">${l.replace(' squad', '')}</button>`).join('')}</div></section>`;
-  if (st.squad) {
-    if (f) {
-      h += `<section class="fixture ${st.squad}"><div class="when">${esc(label)} · ${esc(dateText(f.date))}</div>
+  const fixtureHtml = f ? `<section class="fixture ${st.squad}"><div class="when">${esc(label)} · ${esc(dateText(f.date))}</div>
+        <div class="row">${f.meet ? `<div><b>Meet at</b>${esc(f.meet)}</div>` : ''}${f.ko ? `<div><b>Kick-off</b>${esc(f.ko)}</div>` : ''}</div>
         <div class="vs">v ${esc(f.opp || 'Opposition to be confirmed')}</div>
         ${f.venue ? `<div class="venue">${esc(f.venue)}</div>` : ''}
-        <div class="row">${f.meet ? `<div><b>Meet</b>${esc(f.meet)}</div>` : ''}${f.ko ? `<div><b>Kick-off</b>${esc(f.ko)}</div>` : ''}</div>
         ${placeQuery(f) ? `<div class="mapbox"><iframe title="Map of ${esc(placeQuery(f))}" src="${esc(embedUrl(placeQuery(f)))}" loading="lazy"></iframe></div>` : ''}
-        ${placeQuery(f) || f.map ? `<a class="map" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</section>`;
-    } else {
-      h += `<p class="muted">Match details for this Saturday will appear here once the coaches add them.</p>`;
-    }
-    if (st.sent) {
-      h += `<div class="done" role="status"><b>Thanks! ${esc(st.sent)}</b><p>Change of plan? Just send it again; the newest answer counts.</p><button type="button" class="again" data-again>Send for another boy</button></div>`;
-    } else {
+        ${placeQuery(f) || f.map ? `<a class="map" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</section>` : '';
+  let h = '';
+  if (st.sent) {
+    /* after sending: the thank-you takes the top of the page, match details underneath */
+    h += `<div class="done" role="status"><b>Thanks! ${esc(st.sent)}</b><p>Change of plan? Just send it again; the newest answer counts.</p>
+      <div class="donebtns"><button type="button" class="again" data-change>Change answer</button><button type="button" class="again" data-again>Send for another boy</button></div></div>`;
+    h += fixtureHtml;
+  } else {
+    h += `<div><h1>Can your son play on Saturday?</h1><p class="lead">Tap his squad, his name, and how long he can play.</p></div>`;
+    if (st.error) h += `<div class="err">${esc(st.error)}</div>`;
+    h += `<section><h2>1. Squad</h2><div class="grid2">${SQUADS.map(([k, l]) => `<button type="button" class="opt sq ${k}" data-squad="${k}" aria-pressed="${st.squad === k}">${l.replace(' squad', '')}</button>`).join('')}</div></section>`;
+    if (st.squad) {
+      h += fixtureHtml || `<p class="muted">Match details for this Saturday will appear here once the coaches add them.</p>`;
       h += `<section><h2>2. Your son</h2>${names.length ? `<div class="grid3">${names.map(n => `<button type="button" class="opt" data-kid="${esc(n)}" aria-pressed="${st.kid === n}">${esc(n)}</button>`).join('')}</div><p class="muted" style="margin-top:8px">Name missing? Message the coach.</p>` : '<p class="muted">The coaches haven\u2019t added the names yet.</p>'}</section>`;
       h += `<section><h2>3. How long can he play?</h2><div class="long">${OPTS.map(([k, t, s]) => `<button type="button" class="opt" data-avail="${k}" aria-pressed="${st.avail === k}"><b>${t}</b><span>${s}</span></button>`).join('')}</div></section>`;
       h += `<button type="button" class="send" data-send ${st.kid && st.avail && !st.sending ? '' : 'disabled'}>${st.sending ? 'Sending…' : 'Send'}</button>`;
@@ -109,6 +113,7 @@ function render() {
   app.querySelectorAll('[data-avail]').forEach(b => b.onclick = () => { st.avail = b.dataset.avail; render(); });
   const s = app.querySelector('[data-send]'); if (s) s.onclick = send;
   const a = app.querySelector('[data-again]'); if (a) a.onclick = () => { st.kid = null; st.avail = null; st.sent = null; render(); window.scrollTo(0, 0); };
+  const c = app.querySelector('[data-change]'); if (c) c.onclick = () => { st.sent = null; render(); window.scrollTo(0, 0); };
 }
 
 async function send() {
@@ -120,10 +125,12 @@ async function send() {
     if (!j.ok) throw new Error('not saved');
     const words = { full: 'down for the full game.', first: 'down for the first half (match 1).', second: 'down for the second half (match 2).', out: 'marked as can\u2019t play.' };
     st.sent = `${st.kid}\u2019s ${words[st.avail]}`;
+    try { localStorage.setItem('tt.parent.kid', st.kid); } catch (e) {}
   } catch (e) {
     st.error = 'That didn\u2019t go through. Check your signal and tap Send again.';
   }
   st.sending = false; render();
+  if (st.sent) window.scrollTo(0, 0);
 }
 
 async function load() {
