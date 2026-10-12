@@ -2437,8 +2437,8 @@ function fixtureCard(sq, f) {
     ${placeQuery(f) || f.map ? `<a class="maplink" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</div>`;
 }
 /* The WhatsApp message for parents: the fixture plus the link */
-function parentsMessage(sq) {
-  const f = fixtureFor(sq), L = [`${sq === 'Greens' ? '🟢' : '🔴'} *${SQUAD_LABEL[sq].toUpperCase()}: THIS SATURDAY*`, ''];
+function parentsMessage(sq, given) {
+  const f = given || fixtureFor(sq), L = [`${sq === 'Greens' ? '🟢' : '🔴'} *${SQUAD_LABEL[sq].toUpperCase()}: THIS SATURDAY*`, ''];
   if (f) {
     L.push(`📅 *Date:* ${dateText(f.date)}`);
     L.push(`⚽ *Opposition:* ${f.opp || 'to be confirmed'}`);
@@ -2450,6 +2450,34 @@ function parentsMessage(sq) {
   }
   L.push('👉 *PLEASE CONFIRM IF YOUR SON CAN PLAY*', 'Tap the link, pick his name and how long he can play. Takes 10 seconds:', PARENTS_URL);
   return L.join('\n');
+}
+
+/* what's typed in the match form right now (null if the form isn't open or is empty) */
+function formFixture() {
+  const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  if (!document.getElementById('fxDate')) return null;
+  const f = { date: g('fxDate'), opp: g('fxOpp'), venue: g('fxVenue'), eircode: g('fxEir').toUpperCase(), meet: g('fxMeet'), ko: g('fxKo') };
+  return f.opp || f.venue || f.meet || f.ko ? f : null;
+}
+/* send to parents: use what's typed (saving it quietly), else the saved match */
+function sendToParents(how) {
+  const sq = MD.squad, typed = formFixture(), f = typed || fixtureFor(sq);
+  if (!f) { toast('Fill in this week\u2019s match first'); return; }
+  const text = parentsMessage(sq, f);
+  if (how === 'wa') openWhatsApp(text); else copyText(text);
+  if (typed) {
+    if (PIN) saveFixture(sq, typed).then(ok => { if (ok) { EDIT_FIX = false; renderMatch(); } });
+    else toast('Sent. Add your PIN in Settings so the match also shows on the parents\u2019 page.');
+  }
+}
+async function saveFixture(sq, val) {
+  if (!(await boxSet('fixture:' + sq, val))) return false;
+  if (val.venue) {
+    const list = (BOX.info.venues || []).filter(x => x.venue.toLowerCase() !== val.venue.toLowerCase());
+    list.unshift({ venue: val.venue, eircode: val.eircode });
+    await boxSet('venues', list.slice(0, 12));
+  }
+  return true;
 }
 
 /* --- fair split of the four halves (kids stay with one team all morning) --- */
@@ -2602,20 +2630,12 @@ function renderResult() {
 async function matchAction(act) {
   const sq = MD.squad;
   if (act === 'refresh') { BOX.loading = true; renderMatch(); await boxLoad(); renderMatch(); }
-  if (act === 'askwa') openWhatsApp(parentsMessage(sq));
-  if (act === 'askcopy') copyText(parentsMessage(sq));
+  if (act === 'askwa') sendToParents('wa');
+  if (act === 'askcopy') sendToParents('copy');
   if (act === 'savepin') { const p = $('#pinBox').value.trim(); if (p) { PIN = p; try { localStorage.setItem(PIN_KEY, p); } catch (e) {} toast('PIN saved on this phone'); renderMatch(); } }
   if (act === 'savefix') {
-    const venue = $('#fxVenue').value.trim(), eircode = $('#fxEir').value.trim().toUpperCase();
-    const val = { date: $('#fxDate').value, opp: $('#fxOpp').value.trim(), venue, eircode, meet: $('#fxMeet').value, ko: $('#fxKo').value };
-    if (await boxSet('fixture:' + sq, val)) {
-      if (venue) {                                   // remember the venue for next time
-        const list = (BOX.info.venues || []).filter(x => x.venue.toLowerCase() !== venue.toLowerCase());
-        list.unshift({ venue, eircode });
-        await boxSet('venues', list.slice(0, 12));
-      }
-      EDIT_FIX = false; toast('Match saved: parents will see it'); renderMatch();
-    }
+    const val = formFixture() || { date: $('#fxDate').value, opp: '', venue: '', eircode: '', meet: '', ko: '' };
+    if (await saveFixture(sq, val)) { EDIT_FIX = false; toast('Match saved: parents will see it'); renderMatch(); }
   }
   if (act === 'editnames') { EDIT_NAMES = true; renderMatch(); }
   if (act === 'editfix') { EDIT_FIX = true; renderMatch(); }
