@@ -219,6 +219,8 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .changed{background:#FFF3C4;border-left:5px solid #E8C64A;border-radius:8px;padding:9px 12px;color:var(--ink)!important}
 .late h3{font-size:17px;font-weight:900;margin:16px 0 4px}
 .late .chips{margin:6px 0 4px}
+.latepick{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;padding:10px 12px;background:var(--warn);border-radius:12px}
+.addkid + .latepick{background:none;padding:4px 0}
 .settings h3{font-size:17px;font-weight:900;margin:20px 0 8px}
 .chip.squad-Reds[aria-pressed="true"]{background:#C8102E;border-color:#C8102E}
 .chip.squad-Greens[aria-pressed="true"]{background:#0F7B3F;border-color:#0F7B3F}
@@ -2699,6 +2701,16 @@ function lineupText(res) {
   return L.join('\n');
 }
 
+const LATE_OPTS = [['full', 'Full'], ['first', 'Match 1'], ['second', 'Match 2']];
+let LATE_PICK = null;
+/* someone not on the list, e.g. a borrowed player */
+function addGuest(a) {
+  const sq = MD.squad, n = ($('#guestName').value || '').trim();
+  if (!n) { toast('Type his name first'); return; }
+  if (kidsFor(sq).some(k => k.name.toLowerCase() === n.toLowerCase())) { toast(`${n} is already on the list: tap his name above`); return; }
+  MD.guests[sq] = (MD.guests[sq] || []).concat({ name: n, t: Date.now() }); setAnswer(sq, n, a);
+  regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
+}
 /* redo the game time after a late change, keeping everyone on their team */
 function regenKeepingTeams(msg) {
   const sq = MD.squad, fixed = new Map();
@@ -2882,8 +2894,10 @@ function renderResult() {
       <h3>Pulled out?</h3><p>Tap a name to take him out.</p>
       <div class="chips">${playing.map(k => `<button type="button" class="chip small" data-out="${esc(k.name)}">${esc(k.name)} ✕</button>`).join('')}</div>
       <h3>Late entry?</h3>
-      ${notPlaying.length ? `<p>Tap a name to add him for the full game.</p><div class="chips">${notPlaying.map(k => `<button type="button" class="chip small" data-in="${esc(k.name)}">+ ${esc(k.name)}</button>`).join('')}</div>` : ''}
-      <div class="addkid"><input id="guestName" type="text" placeholder="Someone not on the list" autocomplete="off"><button type="button" class="chip" data-act="addguest">Add</button></div>
+      ${notPlaying.length ? `<p>Tap a name, then pick how long he can play.</p><div class="chips">${notPlaying.map(k => `<button type="button" class="chip small" data-in="${esc(k.name)}" aria-pressed="${LATE_PICK === k.name}">+ ${esc(k.name)}</button>`).join('')}</div>
+        ${LATE_PICK ? `<div class="latepick"><b>${esc(LATE_PICK)} can play:</b>${LATE_OPTS.map(([a, l]) => `<button type="button" class="chip small" data-latein="${a}">${l}</button>`).join('')}</div>` : ''}` : ''}
+      <div class="addkid"><input id="guestName" type="text" placeholder="Someone not on the list" autocomplete="off"></div>
+      <div class="latepick">${LATE_OPTS.map(([a, l]) => `<button type="button" class="chip small" data-guest="${a}">Add for ${l.toLowerCase()}</button>`).join('')}</div>
     </div>`;
   box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
   box.querySelectorAll('[data-out]').forEach(b => b.onclick = () => {
@@ -2891,11 +2905,13 @@ function renderResult() {
     if (g.some(x => x.name === n)) MD.guests[sq] = g.filter(x => x.name !== n); else setAnswer(sq, n, 'out');
     regenKeepingTeams(`${n} taken out. Game time redone.`);
   });
-  box.querySelectorAll('[data-in]').forEach(b => b.onclick = () => {
-    const n = b.dataset.in; setAnswer(sq, n, 'full');
-    regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
+  box.querySelectorAll('[data-in]').forEach(b => b.onclick = () => { LATE_PICK = LATE_PICK === b.dataset.in ? null : b.dataset.in; renderResult(); });
+  box.querySelectorAll('[data-latein]').forEach(b => b.onclick = () => {
+    const n = LATE_PICK, a = b.dataset.latein; LATE_PICK = null;
+    setAnswer(sq, n, a);
+    regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)} (${LATE_OPTS.find(o => o[0] === a)[1].toLowerCase()}). Game time redone.`);
   });
-  const gi = $('#guestName'); if (gi) gi.addEventListener('keydown', e => { if (e.key === 'Enter') matchAction('addguest'); });
+  box.querySelectorAll('[data-guest]').forEach(b => b.onclick = () => addGuest(b.dataset.guest));
 }
 
 async function matchAction(act) {
@@ -2908,13 +2924,7 @@ async function matchAction(act) {
     const val = formFixture() || { date: $('#fxDate').value, opp: '', venue: '', eircode: '', meet: '', ko: '' };
     if (await saveFixture(sq, val)) { EDIT_FIX = false; toast('Match saved: parents will see it'); renderMatch(); }
   }
-  if (act === 'addguest') {
-    const n = ($('#guestName').value || '').trim();
-    if (!n) return;
-    if (kidsFor(sq).some(k => k.name.toLowerCase() === n.toLowerCase())) { toast(`${n} is already on the list: tap his name above`); return; }
-    MD.guests[sq] = (MD.guests[sq] || []).concat({ name: n, t: Date.now() }); setAnswer(sq, n, 'full');
-    regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
-  }
+
   if (act === 'editnames') { EDIT_NAMES = true; renderMatch(); }
   if (act === 'editfix') { EDIT_FIX = true; renderMatch(); }
   if (act === 'cancelfix') { EDIT_FIX = false; renderMatch(); }
