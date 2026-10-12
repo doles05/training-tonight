@@ -191,6 +191,24 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .gt td.nm{text-align:left;font-weight:700}
 .gt td.on{color:var(--pitch2)}.gt td.gk{color:var(--cone)}.gt td.sub{color:var(--ink2);font-weight:600;font-size:13px}
 .gt td.na{color:#B8C0CC}.gt td.mins{font-variant-numeric:tabular-nums}
+.form{display:grid;gap:12px}
+.form label{display:grid;gap:4px;font-weight:800;font-size:14px}
+.form input{min-height:48px;border:2px solid var(--line);border-radius:12px;padding:0 12px;font:inherit;font-size:16px;background:var(--card);color:var(--ink);width:100%}
+.form .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt-l{font-weight:600;color:var(--ink2)}
+#namesBox{width:100%;border:2px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:16px;background:var(--card);resize:vertical}
+.count{display:inline-block;margin-left:6px;font-size:14px;background:var(--paper);border-radius:999px;padding:2px 10px;vertical-align:3px}
+.fixture{background:var(--card);border-radius:18px;padding:16px;border-top:7px solid #0F7B3F;display:grid;gap:10px}
+.fixture.Reds{border-top-color:#C8102E}
+.fixture .when{font-size:13px;font-weight:800;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
+.fixture .vs{font-size:24px;font-weight:900;line-height:1.15}
+.fixture .venue{font-weight:700}
+.fixture .frow{display:flex;gap:18px;flex-wrap:wrap}
+.fixture .frow b{display:block;font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.04em}
+.maplink{display:flex;align-items:center;justify-content:center;gap:8px;min-height:50px;border-radius:12px;background:#E8F0FE;color:#0F4FA8;font-weight:900;text-decoration:none}
+.maplink svg{width:20px;height:20px}
+.chip.squad-Reds[aria-pressed="true"]{background:#C8102E;border-color:#C8102E}
+.chip.squad-Greens[aria-pressed="true"]{background:#0F7B3F;border-color:#0F7B3F}
 @media (max-width:440px){ .brand-name{display:none} }
 @media (max-width:420px){
   .hero h1{font-size:29px}
@@ -2111,7 +2129,7 @@ function show(view) {
   ['setup', 'plan', 'match', 'favs'].forEach(v => { $('#view-' + v).hidden = v !== view; });
   document.querySelectorAll('.top nav button').forEach(b => b.setAttribute('aria-current', b.dataset.go === view ? 'page' : 'false'));
   if (view === 'favs') renderFavs();
-  if (view === 'match') renderMatch();
+  if (view === 'match') openMatch();
   window.scrollTo(0, 0);
 }
 
@@ -2345,69 +2363,82 @@ function sessionText(P) {
 }
 
 /* =========================================================
-   10. MATCHDAY GAME TIME
-   Each squad plays as two teams of 5 on two pitches at once,
-   then the teams swap opponents: 2 matches, 4 halves in all.
-   "First half only" = match 1, "second half only" = match 2.
+   10. MATCHDAY: fixtures, squad names, parents' link, game time
+   Shared data lives in a Google Sheet ("the box") reached through API.
+   Each squad plays as two teams of 5 on two pitches at once, then the
+   teams swap opponents: 2 matches, 4 halves.
    ========================================================= */
-const MD_KEY = 'trainingTonight.matchday.v1';
-let MD = { squad: 'Reds', half: 10, size: 5, seed: 1, paste: '', squads: { Reds: [], Greens: [] } };
-try { const s = JSON.parse(localStorage.getItem(MD_KEY) || 'null'); if (s && s.squads) MD = Object.assign(MD, s); } catch (e) { /* first visit */ }
+const API = 'https://script.google.com/macros/s/AKfycbyqVWI2oOrU_SyXriPu8-bIgVEg6sc9vEbVx7c3-ZvO6Z4B57JyTQw2uVG2dlHCIsIa/exec';
+const PARENTS_URL = 'https://doles05.github.io/training-tonight/parents.html';
+const SQUAD_LABEL = { Reds: 'Red squad', Greens: 'Green squad' };
+const MD_KEY = 'trainingTonight.matchday.v2', PIN_KEY = 'trainingTonight.pin';
+let MD = { squad: 'Reds', half: 10, size: 5, seed: 1, avail: { Reds: {}, Greens: {} } };
+try { const s = JSON.parse(localStorage.getItem(MD_KEY) || 'null'); if (s && s.avail) MD = Object.assign(MD, s); } catch (e) { /* first visit */ }
 function saveMD() { try { localStorage.setItem(MD_KEY, JSON.stringify(MD)); } catch (e) { /* storage blocked */ } }
-let MD_RESULT = null;
+let PIN = ''; try { PIN = localStorage.getItem(PIN_KEY) || ''; } catch (e) { /* storage blocked */ }
+let BOX = { loaded: false, loading: false, error: '', info: {}, answers: [] };
+let MD_RESULT = null, EDIT_NAMES = false;
 const AV = [['full', 'Full'], ['first', '1st half'], ['second', '2nd half'], ['out', 'Out']];
 const PERIODS = ['Match 1, 1st half', 'Match 1, 2nd half', 'Match 2, 1st half', 'Match 2, 2nd half'];
 const PERIOD_SHORT = ['M1 1st', 'M1 2nd', 'M2 1st', 'M2 2nd'];
 const quartersFor = a => a === 'full' ? [0, 1, 2, 3] : a === 'first' ? [0, 1] : a === 'second' ? [2, 3] : [];
 
-function availabilityMessage(squad) {
-  return `⚽ *Saturday matches: ${squad}*\nPlease add your son's name under ONE heading, then copy the whole message and post it back in the group.\n\n✅ Full morning:\n\n🕐 First half only (match 1):\n\n🕑 Second half only (match 2):\n\n❌ Can't play:\n`;
+/* --- talking to the box --- */
+async function boxLoad() {
+  BOX.loading = true; BOX.error = '';
+  try {
+    const r = await fetch(API, { cache: 'no-store' });
+    const j = await r.json();
+    BOX.info = j.info || {}; BOX.answers = j.answers || []; BOX.loaded = true;
+  } catch (e) { BOX.error = 'Couldn\u2019t reach the sheet. Check your signal and tap Refresh.'; }
+  BOX.loading = false;
 }
+async function boxSet(key, value) {
+  if (!PIN) { toast('Enter your PIN first'); return false; }
+  try {
+    const r = await fetch(API, { method: 'POST', body: JSON.stringify({ type: 'set', pin: PIN, key, value }) });
+    const j = await r.json();
+    if (j.ok) { BOX.info[key] = value; return true; }
+    toast(j.error === 'pin' ? 'That PIN doesn\u2019t match the one in your sheet' : 'Not saved, try again');
+  } catch (e) { toast('Not saved: check your signal'); }
+  return false;
+}
+const squadNames = sq => ((BOX.info.squads || {})[sq] || []).slice().sort((a, b) => a.localeCompare(b));
+function nextSaturday() { const d = new Date(); d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7)); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function fixtureFor(sq) {
+  const f = BOX.info['fixture:' + sq];
+  if (!f || !f.date) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return new Date(f.date + 'T23:59:00') >= today ? f : null;
+}
+const mapUrl = f => f.map && /^https?:\/\//.test(f.map) ? f.map : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(f.venue || '');
+const dateText = iso => { const d = new Date(iso + 'T12:00:00'); return isNaN(d) ? '' : d.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' }); };
+const PIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.6" fill="currentColor"/></svg>';
 
-/* Read names under the headings from a pasted WhatsApp message */
-function parseReplies(text) {
-  const found = [];
-  let cur = null;
-  const headOf = s => {
-    if (/can'?t|cannot|can not|not (playing|available)|unavailable|\bout\b|\bno\b/.test(s)) return 'out';
-    if (/second|2nd|match 2|later/.test(s)) return 'second';
-    if (/first|1st|match 1|early/.test(s)) return 'first';
-    if (/full|all|whole|both/.test(s)) return 'full';
-    return null;
-  };
-  for (const raw of text.split(/\r?\n/)) {
-    let line = raw.replace(/^\[[^\]]{4,30}\]\s*[^:]{1,40}:\s*/, '')                 // "[10/10/2026, 18:01] Name:" prefixes
-      .replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F\u200D*_~]/gu, ' ').trim();
-    if (!line) continue;
-    const low = line.toLowerCase(), colon = line.indexOf(':');
-    const headPart = colon >= 0 ? low.slice(0, colon) : low;
-    const h = headOf(headPart);
-    const words = headPart.split(/\s+/).length;
-    let names = '';
-    if (h && (colon >= 0 || words <= 6) && !/saturday|please|add your/.test(headPart)) { cur = h; names = colon >= 0 ? line.slice(colon + 1) : ''; }
-    else if (cur) names = line;
-    if (!cur || !names.trim()) continue;
-    names.split(/,|&|\+|\/|\band\b/i).forEach(n => {
-      const name = n.replace(/^\s*\d+\s*[.)]\s*/, '').replace(/^[\s\-•·]+/, '').replace(/[.!?()]+$/g, '').trim();
-      if (name.length >= 2 && name.length <= 30 && !/please|heading|message|group/i.test(name)) {
-        found.push({ name: name.replace(/\b\w/g, c => c.toUpperCase()), avail: cur });
-      }
-    });
+function fixtureCard(sq, f) {
+  return `<div class="fixture ${sq}"><div class="when">${esc(SQUAD_LABEL[sq])} · ${esc(dateText(f.date))}</div>
+    <div class="vs">v ${esc(f.opp || 'Opposition to be confirmed')}</div>
+    ${f.venue ? `<div class="venue">${esc(f.venue)}</div>` : ''}
+    <div class="frow">${f.meet ? `<div><b>Meet</b>${esc(f.meet)}</div>` : ''}${f.ko ? `<div><b>Kick-off</b>${esc(f.ko)}</div>` : ''}</div>
+    ${f.venue || f.map ? `<a class="maplink" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</div>`;
+}
+/* The WhatsApp message for parents: the fixture plus the link */
+function parentsMessage(sq) {
+  const f = fixtureFor(sq), L = [];
+  if (f) {
+    L.push(`${sq === 'Greens' ? '🟢' : '🔴'} *${SQUAD_LABEL[sq].toUpperCase()} FIXTURE* - ${dateText(f.date)}`, '');
+    if (f.opp) L.push(`Opposition: ${f.opp}`);
+    if (f.venue) L.push(`Venue: ${f.venue}`);
+    if (f.meet) L.push(`Meeting time: ${f.meet}`);
+    if (f.ko) L.push(`Kick-off: ${f.ko}`);
+    if (f.venue || f.map) L.push(`Map: ${mapUrl(f)}`);
+    L.push('');
   }
-  return found;
-}
-function mergeReplies(list) {
-  const squad = MD.squads[MD.squad];
-  list.forEach(({ name, avail }) => {
-    const low = name.toLowerCase(), first = low.split(' ')[0];
-    let kid = squad.find(k => k.name.toLowerCase() === low);
-    if (!kid) { const m = squad.filter(k => k.name.toLowerCase().split(' ')[0] === first); if (m.length === 1 && !low.includes(' ')) kid = m[0]; }
-    if (kid) kid.avail = avail; else squad.push({ name, avail });
-  });
-  saveMD();
+  L.push('Can your son play? Tap here and pick his name:', PARENTS_URL);
+  return L.join('\n');
 }
 
-/* Share the halves fairly. Kids stay with one team all morning. */
+/* --- fair split of the four halves (kids stay with one team all morning) --- */
 function allocate(kids, size, seed) {
   const rand = rng(seed);
   const avail = kids.filter(k => quartersFor(k.avail).length);
@@ -2440,11 +2471,12 @@ function allocate(kids, size, seed) {
   });
   return { teams: result, notes };
 }
-
 function lineupText(res) {
-  const L = [`⚽ *${MD.squad}: Saturday game time* (halves of ${MD.half} min)`];
+  const sq = MD_RESULT.squad, f = fixtureFor(sq);
+  const L = [`⚽ *${SQUAD_LABEL[sq]}: Saturday game time* (halves of ${MD.half} min)`];
+  if (f) { L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}${f.meet ? '. Meet ' + f.meet : ''}${f.ko ? ', kick-off ' + f.ko : ''}`); if (f.venue || f.map) L.push(mapUrl(f)); }
   res.teams.forEach((t, ti) => {
-    L.push('', `*${MD.squad} ${ti + 1}*`);
+    L.push('', `*${sq} ${ti + 1}*`);
     t.quarters.forEach((q, i) => {
       if (!q.on.length) return;
       const on = q.on.map(n => n === q.keeper ? `${n} (GK)` : n).join(', ');
@@ -2455,48 +2487,77 @@ function lineupText(res) {
   return L.join('\n');
 }
 
+/* --- the Match tab --- */
+function kidsFor(sq) { return squadNames(sq).map(name => ({ name, avail: MD.avail[sq][name] || '?' })); }
+
 function renderMatch() {
-  const v = $('#view-match'), squad = MD.squads[MD.squad];
-  const counts = { full: 0, first: 0, second: 0, out: 0, '?': 0 };
-  squad.forEach(k => counts[k.avail || '?']++);
+  const v = $('#view-match'), sq = MD.squad, names = squadNames(sq), f = BOX.info['fixture:' + sq] || {};
+  const kids = kidsFor(sq), counts = { full: 0, first: 0, second: 0, out: 0, '?': 0 };
+  kids.forEach(k => counts[k.avail]++);
+  const fdate = f.date && fixtureFor(sq) ? f.date : nextSaturday();
   v.innerHTML = `
-    <div class="plan-top"><h1>Saturday game time</h1>
-      <p class="sum">Each squad plays as two teams of ${MD.size} on two pitches, then the teams swap opponents. Two matches, four halves.</p></div>
-    <div class="chips" style="margin-top:14px">${['Reds', 'Greens'].map(s => `<button type="button" class="chip squad-${s}" data-squad="${s}" aria-pressed="${MD.squad === s}">${s}</button>`).join('')}</div>
-    <div class="panel"><h2>1. Ask who can play</h2>
-      <p>Post this in the parents' group. Each parent adds their son's name under one heading and posts the list back.</p>
+    <div class="plan-top"><h1>Saturday matches</h1>
+      <p class="sum">${BOX.loading ? 'Loading from your sheet…' : BOX.error ? '' : 'Saved in your Google Sheet, so every coach sees the same.'}</p></div>
+    ${BOX.error ? `<ul class="notes"><li>${esc(BOX.error)}</li></ul>` : ''}
+    <div class="chips" style="margin-top:14px">${['Reds', 'Greens'].map(s => `<button type="button" class="chip squad-${s}" data-squad="${s}" aria-pressed="${sq === s}">${SQUAD_LABEL[s]}</button>`).join('')}
+      <button type="button" class="chip" data-act="refresh" style="margin-left:auto">${BOX.loading ? 'Loading…' : 'Refresh'}</button></div>
+
+    ${fixtureFor(sq) ? `<div class="panel">${fixtureCard(sq, fixtureFor(sq))}</div>` : ''}
+
+    <div class="panel"><h2>This week's match</h2>
+      <div class="form">
+        <label>Date<input type="date" id="fxDate" value="${esc(fdate)}"></label>
+        <label>Opposition<input type="text" id="fxOpp" value="${esc(f.opp || '')}" placeholder="e.g. Enniskerry" autocomplete="off"></label>
+        <label>Venue<input type="text" id="fxVenue" value="${esc(f.venue || '')}" placeholder="e.g. Hudson Park, Glasthule" autocomplete="off"></label>
+        <div class="two"><label>Meet<input type="time" id="fxMeet" value="${esc(f.meet || '')}"></label><label>Kick-off<input type="time" id="fxKo" value="${esc(f.ko || '')}"></label></div>
+        <label>Google Maps link <span class="opt-l">(optional, for an exact pin)</span><input type="url" id="fxMap" value="${esc(f.map || '')}" placeholder="Paste a maps link, or leave blank" autocomplete="off"></label>
+      </div>
+      <button type="button" class="swap" data-act="savefix" style="margin-top:12px">Save ${esc(SQUAD_LABEL[sq].toLowerCase())} match</button></div>
+
+    <div class="panel"><h2>Send to parents</h2>
+      <p>One message with the match details, the map and the link where parents pick their son and how long he can play.</p>
       <div class="share-row"><button type="button" class="wa" data-act="askwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="askcopy">Copy</button></div></div>
-    <div class="panel"><h2>2. Paste the replies</h2>
-      <p>Copy the latest version of the list from WhatsApp and paste it here.</p>
-      <textarea id="mdPaste" rows="6" placeholder="Paste the WhatsApp list here">${esc(MD.paste || '')}</textarea>
-      <button type="button" class="swap" data-act="read" style="margin-top:10px">Read the names</button></div>
-    <div class="panel"><h2>3. Check the squad</h2>
-      <p>${squad.length ? `${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} out${counts['?'] ? `, ${counts['?']} not replied` : ''}. Tap to change anyone.` : 'No names yet. Paste the replies above, or add names below.'}</p>
-      <div class="kids">${squad.map((k, i) => `
-        <div class="kid${k.avail && k.avail !== '?' ? '' : ' unk'}"><span class="kname">${esc(k.name)}</span>
-          <div class="seg">${AV.map(([a, l]) => `<button type="button" data-kid="${i}" data-av="${a}" aria-pressed="${k.avail === a}">${l}</button>`).join('')}</div>
-          <button type="button" class="kdel" data-del="${i}" aria-label="Remove ${esc(k.name)}">×</button></div>`).join('')}</div>
-      <div class="addkid"><input id="mdName" type="text" placeholder="Add a name" autocomplete="off"><button type="button" class="chip" data-act="add">Add</button></div>
+
+    <div class="panel"><h2>${esc(SQUAD_LABEL[sq])} names <span class="count">${names.length}</span></h2>
+      ${EDIT_NAMES || !names.length ? `
+        <p>One name per line (or separated by commas). Use the name parents will recognise, e.g. "Jack D".</p>
+        <textarea id="namesBox" rows="10" placeholder="Jack D&#10;Sam O'Brien&#10;Luca">${esc(names.join('\n'))}</textarea>
+        <button type="button" class="swap" data-act="savenames" style="margin-top:10px">Save names</button>
+        ${names.length ? '<button type="button" class="back" data-act="canceledit">Cancel</button>' : ''}`
+      : `<p>${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} out${counts['?'] ? `, ${counts['?']} not marked` : ''}. For now, tap each boy's answer here; next stage these fill in from parents automatically.</p>
+        <div class="kids">${kids.map(k => `
+          <div class="kid${k.avail !== '?' ? '' : ' unk'}"><span class="kname">${esc(k.name)}</span>
+            <div class="seg">${AV.map(([a, l]) => `<button type="button" data-kid="${esc(k.name)}" data-av="${a}" aria-pressed="${k.avail === a}">${l}</button>`).join('')}</div></div>`).join('')}</div>
+        <button type="button" class="back" data-act="editnames">Edit names</button>
+        <button type="button" class="back" data-act="reset" style="margin-left:14px">Clear answers</button>`}
+    </div>
+
+    <div class="panel"><h2>Game settings</h2>
       <div class="md-set">
         <div><b>Half length</b><div class="mini"><button type="button" data-md="half" data-d="-1" aria-label="Shorter halves">−</button><span>${MD.half} min</span><button type="button" data-md="half" data-d="1" aria-label="Longer halves">+</button></div></div>
         <div><b>Players per team</b><div class="mini"><button type="button" data-md="size" data-d="-1" aria-label="Fewer per team">−</button><span>${MD.size}</span><button type="button" data-md="size" data-d="1" aria-label="More per team">+</button></div></div>
-      </div>
-      ${squad.length ? '<button type="button" class="back" data-act="reset">New week: clear everyone\'s answer</button>' : ''}</div>
-    <button type="button" class="go" data-act="plan">Plan game time</button>
+      </div></div>
+
+    <div class="panel"><h2>Coach PIN</h2>
+      <p>${PIN ? 'Saved on this phone. Needed to save names and match details.' : 'Enter the PIN from your Google Sheet code once. It stays on this phone.'}</p>
+      <div class="addkid"><input id="pinBox" type="password" inputmode="numeric" placeholder="${PIN ? '••••' : 'PIN'}" autocomplete="off"><button type="button" class="chip" data-act="savepin">${PIN ? 'Change' : 'Save'}</button></div></div>
+
+    <button type="button" class="go" data-act="plan">Generate game time</button>
     <div id="mdResult"></div>`;
   bindMatch();
   if (MD_RESULT && MD_RESULT.squad === MD.squad) renderResult();
 }
 
 function renderResult() {
-  const box = $('#mdResult'), res = MD_RESULT.res;
-  const notReplied = MD.squads[MD.squad].filter(k => !k.avail || k.avail === '?').length;
+  const box = $('#mdResult'), res = MD_RESULT.res, sq = MD_RESULT.squad, f = fixtureFor(sq);
+  const notMarked = kidsFor(sq).filter(k => k.avail === '?').map(k => k.name);
   const notes = res.notes.slice();
-  if (notReplied) notes.unshift(`${notReplied} not replied yet, so they're left out. Mark them and plan again.`);
+  if (notMarked.length) notes.unshift(`${joinList(notMarked)} ${notMarked.length === 1 ? 'isn\u2019t' : 'aren\u2019t'} marked yet, so ${notMarked.length === 1 ? 'he\u2019s' : 'they\u2019re'} left out.`);
   box.innerHTML = `
+    ${f ? `<div class="panel">${fixtureCard(sq, f)}</div>` : ''}
     ${notes.length ? `<ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
     ${res.teams.map((t, ti) => `
-      <div class="panel"><h2>${MD.squad} ${ti + 1}</h2>
+      <div class="panel"><h2>${sq} ${ti + 1}</h2>
         <div class="rota-wrap"><table class="gt">
           <thead><tr><th>Player</th>${PERIOD_SHORT.map(p => `<th>${p}</th>`).join('')}<th>Mins</th></tr></thead>
           <tbody>${t.kids.map(k => `<tr><td class="nm">${esc(k.name)}</td>${t.quarters.map((q, qi) => {
@@ -2511,26 +2572,30 @@ function renderResult() {
   box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
 }
 
-function matchAction(act) {
-  const squad = MD.squads[MD.squad];
-  if (act === 'askwa') openWhatsApp(availabilityMessage(MD.squad));
-  if (act === 'askcopy') copyText(availabilityMessage(MD.squad));
-  if (act === 'read') {
-    MD.paste = $('#mdPaste').value;
-    const list = parseReplies(MD.paste);
-    if (!list.length) { saveMD(); toast('No names found under the headings. Check the paste.'); return; }
-    mergeReplies(list); renderMatch(); toast(`Read ${plural(list.length, 'name')}`);
+async function matchAction(act) {
+  const sq = MD.squad;
+  if (act === 'refresh') { BOX.loading = true; renderMatch(); await boxLoad(); renderMatch(); }
+  if (act === 'askwa') openWhatsApp(parentsMessage(sq));
+  if (act === 'askcopy') copyText(parentsMessage(sq));
+  if (act === 'savepin') { const p = $('#pinBox').value.trim(); if (p) { PIN = p; try { localStorage.setItem(PIN_KEY, p); } catch (e) {} toast('PIN saved on this phone'); renderMatch(); } }
+  if (act === 'savefix') {
+    const val = { date: $('#fxDate').value, opp: $('#fxOpp').value.trim(), venue: $('#fxVenue').value.trim(), meet: $('#fxMeet').value, ko: $('#fxKo').value, map: $('#fxMap').value.trim() };
+    if (await boxSet('fixture:' + sq, val)) { toast('Match saved: parents will see it'); renderMatch(); }
   }
-  if (act === 'add') {
-    const inp = $('#mdName'), name = inp.value.trim();
-    if (name) { squad.push({ name, avail: '?' }); saveMD(); renderMatch(); $('#mdName').focus(); }
+  if (act === 'editnames') { EDIT_NAMES = true; renderMatch(); }
+  if (act === 'canceledit') { EDIT_NAMES = false; renderMatch(); }
+  if (act === 'savenames') {
+    const list = [...new Set($('#namesBox').value.split(/[\n,]+/).map(s => s.trim()).filter(Boolean))];
+    const all = Object.assign({ Reds: [], Greens: [] }, BOX.info.squads || {});
+    all[sq] = list;
+    if (await boxSet('squads', all)) { EDIT_NAMES = false; toast(`${plural(list.length, 'name')} saved`); renderMatch(); }
   }
-  if (act === 'reset') { squad.forEach(k => { k.avail = '?'; }); MD.paste = ''; MD_RESULT = null; saveMD(); renderMatch(); toast('Ready for a new week'); }
+  if (act === 'reset') { MD.avail[sq] = {}; MD_RESULT = null; saveMD(); renderMatch(); toast('Answers cleared'); }
   if (act === 'plan' || act === 'shuffle') {
     if (act === 'shuffle') MD.seed = (MD.seed * 7 + 13) % 100003;
-    const playing = squad.filter(k => quartersFor(k.avail).length);
-    if (!playing.length) { toast('Mark who can play first'); return; }
-    MD_RESULT = { squad: MD.squad, res: allocate(squad, MD.size, MD.seed) };
+    const kids = kidsFor(sq);
+    if (!kids.some(k => quartersFor(k.avail).length)) { toast('Mark who can play first'); return; }
+    MD_RESULT = { squad: sq, res: allocate(kids, MD.size, MD.seed) };
     saveMD(); renderResult();
     $('#mdResult').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
   }
@@ -2541,21 +2606,24 @@ function matchAction(act) {
 function bindMatch() {
   const v = $('#view-match');
   v.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
-  v.querySelectorAll('[data-squad]').forEach(b => b.onclick = () => { MD.squad = b.dataset.squad; MD.paste = ''; saveMD(); renderMatch(); });
+  v.querySelectorAll('[data-squad]').forEach(b => b.onclick = () => { MD.squad = b.dataset.squad; EDIT_NAMES = false; saveMD(); renderMatch(); });
   v.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => {
-    const k = MD.squads[MD.squad][+b.dataset.kid];
-    k.avail = k.avail === b.dataset.av ? '?' : b.dataset.av; saveMD();
-    const row = b.closest('.kid');
-    row.querySelectorAll('[data-av]').forEach(x => x.setAttribute('aria-pressed', x.dataset.av === k.avail));
-    row.classList.toggle('unk', k.avail === '?');
+    const sq = MD.squad, n = b.dataset.kid, cur = MD.avail[sq][n];
+    if (cur === b.dataset.av) delete MD.avail[sq][n]; else MD.avail[sq][n] = b.dataset.av;
+    saveMD();
+    const row = b.closest('.kid'), now = MD.avail[sq][n] || '?';
+    row.querySelectorAll('[data-av]').forEach(x => x.setAttribute('aria-pressed', x.dataset.av === now));
+    row.classList.toggle('unk', now === '?');
   });
-  v.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { MD.squads[MD.squad].splice(+b.dataset.del, 1); saveMD(); renderMatch(); });
   v.querySelectorAll('[data-md]').forEach(b => b.onclick = () => {
     const k = b.dataset.md, lim = k === 'half' ? [5, 30] : [3, 7];
     MD[k] = clamp(MD[k] + +b.dataset.d, lim[0], lim[1]); saveMD(); renderMatch();
   });
-  $('#mdPaste').addEventListener('input', e => { MD.paste = e.target.value; saveMD(); });
-  $('#mdName').addEventListener('keydown', e => { if (e.key === 'Enter') matchAction('add'); });
+}
+/* open the Match tab: show what we have, then fetch the latest from the sheet */
+async function openMatch() {
+  renderMatch();
+  if (!BOX.loading) { BOX.loading = true; renderMatch(); await boxLoad(); renderMatch(); }
 }
 const WA_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6a2.7 2.7 0 0 0 1.8-1.2 2.2 2.2 0 0 0 .1-1.3c0-.1-.2-.2-.4-.3z"/></svg>';
 </script>
