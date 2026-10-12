@@ -211,6 +211,7 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .mapbox iframe{display:block;width:100%;height:100%;border:0}
 .venues{align-items:center;gap:6px}
 .settings-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;min-height:52px;border:2px solid var(--line);border-radius:14px;background:var(--card);padding:0 16px;font-weight:900;font-size:18px}
+.changed{background:#FFF3C4;border-left:5px solid #E8C64A;border-radius:8px;padding:9px 12px;color:var(--ink)!important}
 .late h3{font-size:17px;font-weight:900;margin:16px 0 4px}
 .late .chips{margin:6px 0 4px}
 .settings h3{font-size:17px;font-weight:900;margin:20px 0 8px}
@@ -2485,7 +2486,44 @@ async function saveFixture(sq, val) {
   return true;
 }
 
-/* --- fair split of the four halves (kids stay with one team all morning) --- */
+/* --- fair split of the four halves (kids stay with one team all morning) ---
+   Plans the whole morning at once, level by level: everyone gets 1 half before
+   anyone gets 2, everyone 2 before anyone 3... When there isn't room for all at a
+   level, boys who are there the whole morning go first. A max-flow check makes
+   sure each step can actually be fitted into the four halves. */
+function planHalves(tm, size, rand) {
+  const n = tm.length, Q = [0, 1, 2, 3];
+  const avail = tm.map(k => quartersFor(k.avail));
+  const cap = Q.map(q => Math.min(size, avail.filter(a => a.includes(q)).length));
+  const solve = dem => {                 // max flow: source → boy (demand) → half (1) → sink (places)
+    const N = n + 6, S = n + 4, T = n + 5, c = Array.from({ length: N }, () => new Array(N).fill(0));
+    tm.forEach((k, i) => { c[S][i] = dem[i]; avail[i].forEach(q => { c[i][n + q] = 1; }); });
+    Q.forEach(q => { c[n + q][T] = cap[q]; });
+    let flow = 0;
+    for (;;) {
+      const prev = new Array(N).fill(-1); prev[S] = S; const queue = [S];
+      while (queue.length && prev[T] < 0) { const u = queue.shift(); for (let v = 0; v < N; v++) if (prev[v] < 0 && c[u][v] > 0) { prev[v] = u; queue.push(v); } }
+      if (prev[T] < 0) break;
+      for (let v = T; v !== S; v = prev[v]) { c[prev[v]][v]--; c[v][prev[v]]++; }
+      flow++;
+    }
+    return { ok: flow === dem.reduce((a, b) => a + b, 0), c };
+  };
+  const dem = new Array(n).fill(0), tie = tm.map(() => rand());
+  for (let L = 1; L <= 4; L++) {
+    const order = tm.map((k, i) => i).filter(i => avail[i].length >= L)
+      .sort((a, b) => (avail[b].length === 4) - (avail[a].length === 4) || tie[a] - tie[b]);
+    order.forEach(i => { if (dem[i] !== L - 1) return; dem[i] = L; if (!solve(dem).ok) dem[i] = L - 1; });   // only boys who reached the last level move up
+  }
+  const { c } = solve(dem), on = Q.map(() => new Set()), played = new Map(tm.map(k => [k.name, 0]));
+  tm.forEach((k, i) => avail[i].forEach(q => { if (c[n + q][i] > 0) { on[q].add(k.name); played.set(k.name, played.get(k.name) + 1); } }));
+  Q.forEach(q => {                       // any place still free: give it to whoever has played least
+    const spare = tm.filter((k, i) => avail[i].includes(q) && !on[q].has(k.name))
+      .sort((a, b) => played.get(a.name) - played.get(b.name));
+    while (on[q].size < cap[q] && spare.length) { const k = spare.shift(); on[q].add(k.name); played.set(k.name, played.get(k.name) + 1); }
+  });
+  return { on, played };
+}
 function allocate(kids, size, seed, fixed) {
   const rand = rng(seed);
   const avail = kids.filter(k => quartersFor(k.avail).length);
@@ -2505,20 +2543,33 @@ function allocate(kids, size, seed, fixed) {
   });
   const notes = [], short = [];
   const result = teams.map((tm, ti) => {
-    const played = new Map(tm.map(k => [k.name, 0])), gk = new Map(tm.map(k => [k.name, 0])), tie = new Map(tm.map(k => [k.name, rand()]));
+    const { on, played } = planHalves(tm, size, rand);
+    const gk = new Map(tm.map(k => [k.name, 0])), tie = new Map(tm.map(k => [k.name, rand()]));
     const quarters = [0, 1, 2, 3].map(q => {
-      const av = tm.filter(k => quartersFor(k.avail).includes(q));
-      const future = k => quartersFor(k.avail).filter(x => x > q).length;
-      av.sort((a, b) => played.get(a.name) - played.get(b.name) || future(a) - future(b) || tie.get(a.name) - tie.get(b.name));
-      const on = av.slice(0, size), bench = av.slice(size);
-      on.forEach(k => played.set(k.name, played.get(k.name) + 1));
+      const here = tm.filter(k => quartersFor(k.avail).includes(q));
+      const onq = here.filter(k => on[q].has(k.name)), bench = here.filter(k => !on[q].has(k.name));
       let keeper = null;
-      if (on.length) {
-        keeper = on.slice().sort((a, b) => gk.get(a.name) - gk.get(b.name) || tie.get(a.name) - tie.get(b.name))[0].name;
+      if (onq.length) {                      // keeper: whoever has been in goal least
+        keeper = onq.slice().sort((a, b) => gk.get(a.name) - gk.get(b.name) || tie.get(a.name) - tie.get(b.name))[0].name;
         gk.set(keeper, gk.get(keeper) + 1);
       }
-      if (on.length < size) (short[ti] = short[ti] || []).push({ q, n: on.length });
-      return { on: on.map(k => k.name), bench: bench.map(k => k.name), keeper };
+      if (onq.length < size && tm.length) (short[ti] = short[ti] || []).push({ q, n: onq.length });
+      return { on: onq.map(k => k.name), bench: bench.map(k => k.name), keeper };
+    });
+    /* very rare: a boy who'd get no game at all shares a half (6 mins each) with a boy playing most */
+    tm.forEach(k => {
+      if (played.get(k.name) > 0 || !quartersFor(k.avail).length) return;
+      let best = null;
+      quartersFor(k.avail).forEach(q => quarters[q].on.forEach(d => {
+        if (d === quarters[q].keeper || (quarters[q].split || []).some(s => s.out === d)) return;
+        if (!best || played.get(d) > played.get(best.d)) best = { q, d };
+      }));
+      if (!best || played.get(best.d) < 1) return;
+      const qq = quarters[best.q];
+      (qq.split = qq.split || []).push({ out: best.d, in: k.name });
+      qq.bench = qq.bench.filter(n => n !== k.name);
+      played.set(best.d, played.get(best.d) - 0.5); played.set(k.name, 0.5);
+      notes.push(`${k.name} and ${best.d} share ${PERIODS[best.q].toLowerCase()} (${MD.half / 2} mins each), so everyone gets a game.`);
     });
     return { kids: tm, quarters, played, gk };
   });
@@ -2540,7 +2591,11 @@ function lineupText(res) {
     L.push('', `*${sq} ${ti + 1}*`);
     t.quarters.forEach((q, i) => {
       if (!q.on.length) return;
-      const on = q.on.map(n => n === q.keeper ? `${n} (GK)` : n).join(', ');
+      const on = q.on.map(n => {
+        const sp = (q.split || []).find(s => s.out === n);
+        if (sp) return `${n} (first ${MD.half / 2} min) / ${sp.in} (last ${MD.half / 2} min)`;
+        return n === q.keeper ? `${n} (GK)` : n;
+      }).join(', ');
       L.push(`${PERIODS[i]}: ${on}${q.bench.length ? `. Sub: ${q.bench.join(', ')}` : ''}`);
     });
     L.push('Minutes: ' + t.kids.map(k => `${k.name} ${t.played.get(k.name) * MD.half}`).join(', '));
@@ -2567,13 +2622,19 @@ function teamOf(name) {
 function weekStart() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - d.getDay()); return d.getTime(); }
 function repliesFor(sq) {
   const ws = weekStart(), map = {};
-  (BOX.answers || []).forEach(r => {
+  (BOX.answers || []).slice().sort((x, y) => new Date(x.time) - new Date(y.time)).forEach(r => {
     if ((r.kind || 'match') !== 'match' || r.squad !== sq) return;
     const t = new Date(r.time).getTime();
     if (!(t >= ws)) return;
-    if (!map[r.name] || t >= map[r.name].t) map[r.name] = { a: r.answer, t };
+    const prev = map[r.name];
+    map[r.name] = { a: r.answer, t, was: prev && prev.a !== r.answer ? prev.a : (prev ? prev.was : null) };
   });
   return map;
+}
+/* boys whose answer changed this week: worth a quick check with the parents */
+function changedFor(sq) {
+  const rep = repliesFor(sq), short = { full: 'Full', first: '1st half', second: '2nd half', out: 'Can\u2019t play' };
+  return squadNames(sq).filter(n => rep[n] && rep[n].was).map(n => `${n} (${short[rep[n].was]} → ${short[rep[n].a]})`);
 }
 /* newest answer wins, whether it came from a parent or a coach */
 function answerFor(sq, name, replies) {
@@ -2612,7 +2673,7 @@ function renderMatch() {
   const summary = names.length
     ? `${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} can\u2019t play${counts['?'] ? `, <b>${counts['?']} not replied</b>` : ''}.`
     : 'No names yet: add them under Settings at the bottom.';
-  const waiting = kids.filter(k => k.avail === '?' && !k.guest).map(k => k.name);
+  const waiting = kids.filter(k => k.avail === '?' && !k.guest).map(k => k.name), changed = changedFor(sq);
   v.innerHTML = `
     <div class="plan-top"><h1>Saturday matches</h1>
       ${BOX.loading ? '<p class="sum">Loading…</p>' : ''}</div>
@@ -2641,6 +2702,7 @@ function renderMatch() {
 
     <div class="panel"><h2>Replies</h2>
       <p>${summary}</p>
+      ${changed.length ? `<p class="changed">Answer changed this week: ${esc(joinList(changed))}. Worth a quick check if that looks odd.</p>` : ''}
       ${waiting.length ? `<div class="share-row"><button type="button" class="wa" data-act="remindwa">${WA_ICON} Remind the ${waiting.length} on WhatsApp</button><button type="button" class="copy" data-act="remindcopy">Copy</button></div>` : ''}
       ${names.length ? `<button type="button" class="back" data-act="togglelist">${SHOW_LIST ? 'Hide names' : 'Show names'}</button>` : ''}
       ${SHOW_LIST && names.length ? `
@@ -2692,10 +2754,12 @@ function renderResult() {
           <tbody>${t.kids.map(k => `<tr><td class="nm">${esc(k.name)}</td>${t.quarters.map((q, qi) => {
             if (!quartersFor(k.avail).includes(qi)) return '<td class="na">·</td>';
             if (q.keeper === k.name) return '<td class="gk">GK</td>';
+            const sp = (q.split || []).find(s => s.in === k.name || s.out === k.name);
+            if (sp) return `<td class="on" title="Shares this half">½</td>`;
             return q.on.includes(k.name) ? '<td class="on">✓</td>' : '<td class="sub">Sub</td>';
           }).join('')}<td class="mins">${t.played.get(k.name) * MD.half}</td></tr>`).join('')}</tbody>
         </table></div></div>`).join('')}
-    <p class="small-note">✓ playing, GK in goal, Sub on the bench, · not there.</p>
+    <p class="small-note">✓ playing, GK in goal, ½ shares the half, Sub on the bench, · not there.</p>
     <div class="share-row" style="margin-top:12px"><button type="button" class="wa" data-act="lineupwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="lineupcopy">Copy</button></div>
     <button type="button" class="swap" data-act="shuffle" style="margin-top:12px">Shuffle the two teams</button>
     <div class="panel late"><h2>Late changes</h2>
