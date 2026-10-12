@@ -2383,10 +2383,12 @@ const API = 'https://script.google.com/macros/s/AKfycbyqVWI2oOrU_SyXriPu8-bIgVEg
 const PARENTS_URL = 'https://doles05.github.io/training-tonight/parents.html';
 const SQUAD_LABEL = { Reds: 'Red squad', Greens: 'Green squad' };
 const MD_KEY = 'trainingTonight.matchday.v2', PIN_KEY = 'trainingTonight.pin';
-let MD = { squad: 'Reds', half: 12, size: 5, seed: 1, avail: { Reds: {}, Greens: {} }, guests: { Reds: [], Greens: [] }, v: 3 };
-try { const s = JSON.parse(localStorage.getItem(MD_KEY) || 'null'); if (s && s.avail) MD = Object.assign(MD, s); } catch (e) { /* first visit */ }
-if (MD.v !== 3) { MD.half = 12; MD.size = 5; MD.v = 3; }
-if (!MD.guests) MD.guests = { Reds: [], Greens: [] };
+let MD = { squad: 'Reds', half: 12, size: 5, seed: 1, over: { Reds: {}, Greens: {} }, guests: { Reds: [], Greens: [] }, v: 4 };
+try { const s = JSON.parse(localStorage.getItem(MD_KEY) || 'null'); if (s) MD = Object.assign(MD, s); } catch (e) { /* first visit */ }
+if (!MD.v || MD.v < 3) { MD.half = 12; MD.size = 5; }
+if (!MD.over) MD.over = { Reds: {}, Greens: {} };
+if (!MD.guests || (MD.guests.Reds || []).some(g => typeof g === 'string')) MD.guests = { Reds: [], Greens: [] };
+delete MD['avail']; MD.v = 4;
 function saveMD() { try { localStorage.setItem(MD_KEY, JSON.stringify(MD)); } catch (e) { /* storage blocked */ } }
 let PIN = ''; try { PIN = localStorage.getItem(PIN_KEY) || ''; } catch (e) { /* storage blocked */ }
 let BOX = { loaded: false, loading: false, error: '', info: {}, answers: [] };
@@ -2501,7 +2503,7 @@ function allocate(kids, size, seed, fixed) {
     const t = cost(0) < cost(1) ? 0 : cost(1) < cost(0) ? 1 : (rand() < .5 ? 0 : 1);
     teams[t].push(k); q.forEach(x => cnt[t][x]++);
   });
-  const notes = [];
+  const notes = [], short = [];
   const result = teams.map((tm, ti) => {
     const played = new Map(tm.map(k => [k.name, 0])), gk = new Map(tm.map(k => [k.name, 0])), tie = new Map(tm.map(k => [k.name, rand()]));
     const quarters = [0, 1, 2, 3].map(q => {
@@ -2515,11 +2517,19 @@ function allocate(kids, size, seed, fixed) {
         keeper = on.slice().sort((a, b) => gk.get(a.name) - gk.get(b.name) || tie.get(a.name) - tie.get(b.name))[0].name;
         gk.set(keeper, gk.get(keeper) + 1);
       }
-      if (on.length < size) notes.push(`Team ${ti + 1} has only ${on.length} for ${PERIODS[q].toLowerCase()}: play ${on.length}-a-side or borrow a player.`);
+      if (on.length < size) (short[ti] = short[ti] || []).push({ q, n: on.length });
       return { on: on.map(k => k.name), bench: bench.map(k => k.name), keeper };
     });
     return { kids: tm, quarters, played, gk };
   });
+  const parts = [];
+  short.forEach((list, ti) => {
+    if (!list) return;
+    const least = Math.min(...list.map(x => x.n));
+    const where = list.length === 4 ? 'every half' : joinList(list.map(x => PERIOD_SHORT[x.q]));
+    parts.push(`Team ${ti + 1} has only ${least} in ${where}`);
+  });
+  if (parts.length) notes.push(`Short for ${size}-a-side: ${parts.join('; ')}. Play a man down or borrow a player.`);
   return { teams: result, notes };
 }
 function lineupText(res) {
@@ -2553,9 +2563,44 @@ function teamOf(name) {
 }
 
 /* --- the Match tab --- */
+/* This week = since Sunday 00:00, so answers for Saturday's match count and last week's don't */
+function weekStart() { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - d.getDay()); return d.getTime(); }
+function repliesFor(sq) {
+  const ws = weekStart(), map = {};
+  (BOX.answers || []).forEach(r => {
+    if ((r.kind || 'match') !== 'match' || r.squad !== sq) return;
+    const t = new Date(r.time).getTime();
+    if (!(t >= ws)) return;
+    if (!map[r.name] || t >= map[r.name].t) map[r.name] = { a: r.answer, t };
+  });
+  return map;
+}
+/* newest answer wins, whether it came from a parent or a coach */
+function answerFor(sq, name, replies) {
+  const r = replies[name], o = MD.over[sq] && MD.over[sq][name];
+  const coach = o && o.t >= weekStart() ? o : null;
+  const pick = !r ? coach : !coach ? r : (coach.t >= r.t ? coach : r);
+  return pick ? pick.a : '?';
+}
 function kidsFor(sq) {
-  return squadNames(sq).map(name => ({ name, avail: MD.avail[sq][name] || '?' }))
-    .concat((MD.guests[sq] || []).map(name => ({ name, avail: MD.avail[sq][name] || 'full', guest: true })));
+  const replies = repliesFor(sq), ws = weekStart();
+  const guests = (MD.guests[sq] || []).filter(g => g.t >= ws);
+  return squadNames(sq).map(name => ({ name, avail: answerFor(sq, name, replies) }))
+    .concat(guests.map(g => { const a = answerFor(sq, g.name, {}); return { name: g.name, avail: a === '?' ? 'full' : a, guest: true }; }));
+}
+/* a coach changes an answer: kept on this device straight away, and sent to the sheet so other coaches see it */
+function setAnswer(sq, name, a) {
+  MD.over[sq] = MD.over[sq] || {};
+  MD.over[sq][name] = { a, t: Date.now() };
+  saveMD();
+  if (squadNames(sq).includes(name)) {
+    fetch(API, { method: 'POST', body: JSON.stringify({ type: 'answer', kind: 'match', squad: sq, name, answer: a }) })
+      .then(() => BOX.answers.push({ time: new Date().toISOString(), kind: 'match', squad: sq, name, answer: a }))
+      .catch(() => { /* kept on this device anyway */ });
+  }
+}
+function reminderText(sq, names) {
+  return `⚽ *${SQUAD_LABEL[sq]}: still waiting to hear about*\n${names.join(', ')}\n\n👉 *Can he play Saturday?* Tap the link and pick his name (10 seconds):\n${PARENTS_URL}`;
 }
 
 function renderMatch() {
@@ -2565,8 +2610,9 @@ function renderMatch() {
   const fdate = f.date && live ? f.date : nextSaturday();
   const showForm = EDIT_FIX || !live;
   const summary = names.length
-    ? `${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} out${counts['?'] ? `, <b>${counts['?']} not in yet</b>` : ''}.`
+    ? `${counts.full} full, ${counts.first} first half, ${counts.second} second half, ${counts.out} can\u2019t play${counts['?'] ? `, <b>${counts['?']} not replied</b>` : ''}.`
     : 'No names yet: add them under Settings at the bottom.';
+  const waiting = kids.filter(k => k.avail === '?' && !k.guest).map(k => k.name);
   v.innerHTML = `
     <div class="plan-top"><h1>Saturday matches</h1>
       ${BOX.loading ? '<p class="sum">Loading…</p>' : ''}</div>
@@ -2595,12 +2641,13 @@ function renderMatch() {
 
     <div class="panel"><h2>Replies</h2>
       <p>${summary}</p>
+      ${waiting.length ? `<div class="share-row"><button type="button" class="wa" data-act="remindwa">${WA_ICON} Remind the ${waiting.length} on WhatsApp</button><button type="button" class="copy" data-act="remindcopy">Copy</button></div>` : ''}
       ${names.length ? `<button type="button" class="back" data-act="togglelist">${SHOW_LIST ? 'Hide names' : 'Show names'}</button>` : ''}
       ${SHOW_LIST && names.length ? `
         <div class="kids">${kids.map(k => `
           <div class="kid${k.avail !== '?' ? '' : ' unk'}"><span class="kname">${esc(k.name)}</span>
             <div class="seg">${AV.map(([a, l]) => `<button type="button" data-kid="${esc(k.name)}" data-av="${a}" aria-pressed="${k.avail === a}">${l}</button>`).join('')}</div></div>`).join('')}</div>
-        <button type="button" class="back" data-act="reset">Clear answers</button>` : ''}
+        <p class="small-note">Parents\u2019 answers fill in by themselves. Tap to change one, e.g. if a parent texts you.</p>` : ''}
     </div>
 
     <button type="button" class="go" data-act="plan">Generate game time</button>
@@ -2634,7 +2681,7 @@ function renderResult() {
   const all = kidsFor(sq), playing = all.filter(k => quartersFor(k.avail).length), notPlaying = all.filter(k => !quartersFor(k.avail).length);
   const notMarked = kidsFor(sq).filter(k => k.avail === '?').map(k => k.name);
   const notes = res.notes.slice();
-  if (notMarked.length) notes.unshift(`${joinList(notMarked)} ${notMarked.length === 1 ? 'isn\u2019t' : 'aren\u2019t'} marked yet, so ${notMarked.length === 1 ? 'he\u2019s' : 'they\u2019re'} left out.`);
+  if (notMarked.length) notes.unshift(`No reply yet from ${joinList(notMarked)}, so ${notMarked.length === 1 ? 'he\u2019s' : 'they\u2019re'} left out. Late answer? Add him under Late changes.`);
   box.innerHTML = `
     ${f ? `<div class="panel">${fixtureCard(sq, f)}</div>` : ''}
     ${notes.length ? `<ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
@@ -2661,11 +2708,11 @@ function renderResult() {
   box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
   box.querySelectorAll('[data-out]').forEach(b => b.onclick = () => {
     const n = b.dataset.out, g = MD.guests[sq] || [];
-    if (g.includes(n)) MD.guests[sq] = g.filter(x => x !== n); else MD.avail[sq][n] = 'out';
+    if (g.some(x => x.name === n)) MD.guests[sq] = g.filter(x => x.name !== n); else setAnswer(sq, n, 'out');
     regenKeepingTeams(`${n} taken out. Game time redone.`);
   });
   box.querySelectorAll('[data-in]').forEach(b => b.onclick = () => {
-    const n = b.dataset.in; MD.avail[sq][n] = 'full';
+    const n = b.dataset.in; setAnswer(sq, n, 'full');
     regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
   });
   const gi = $('#guestName'); if (gi) gi.addEventListener('keydown', e => { if (e.key === 'Enter') matchAction('addguest'); });
@@ -2685,7 +2732,7 @@ async function matchAction(act) {
     const n = ($('#guestName').value || '').trim();
     if (!n) return;
     if (kidsFor(sq).some(k => k.name.toLowerCase() === n.toLowerCase())) { toast(`${n} is already on the list: tap his name above`); return; }
-    MD.guests[sq] = (MD.guests[sq] || []).concat(n); MD.avail[sq][n] = 'full';
+    MD.guests[sq] = (MD.guests[sq] || []).concat({ name: n, t: Date.now() }); setAnswer(sq, n, 'full');
     regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
   }
   if (act === 'editnames') { EDIT_NAMES = true; renderMatch(); }
@@ -2700,9 +2747,13 @@ async function matchAction(act) {
     all[sq] = list;
     if (await boxSet('squads', all)) { EDIT_NAMES = false; toast(`${plural(list.length, 'name')} saved`); renderMatch(); }
   }
-  if (act === 'reset') { MD.avail[sq] = {}; MD.guests[sq] = []; MD_RESULT = null; saveMD(); renderMatch(); toast('Answers cleared'); }
+  if (act === 'remindwa' || act === 'remindcopy') {
+    const w = kidsFor(sq).filter(k => k.avail === '?' && !k.guest).map(k => k.name);
+    if (act === 'remindwa') openWhatsApp(reminderText(sq, w)); else copyText(reminderText(sq, w));
+  }
   if (act === 'plan' || act === 'shuffle') {
     if (act === 'shuffle') MD.seed = (MD.seed * 7 + 13) % 100003;
+    if (act === 'plan') { await boxLoad(); renderMatch(); }
     const kids = kidsFor(sq);
     if (!kids.some(k => quartersFor(k.avail).length)) { toast('Mark who can play first'); return; }
     MD_RESULT = { squad: sq, res: allocate(kids, MD.size, MD.seed) };
@@ -2718,10 +2769,10 @@ function bindMatch() {
   v.querySelectorAll('[data-act]').forEach(b => b.onclick = () => matchAction(b.dataset.act));
   v.querySelectorAll('[data-squad]').forEach(b => b.onclick = () => { MD.squad = b.dataset.squad; EDIT_NAMES = false; EDIT_FIX = false; saveMD(); renderMatch(); });
   v.querySelectorAll('[data-kid]').forEach(b => b.onclick = () => {
-    const sq = MD.squad, n = b.dataset.kid, cur = MD.avail[sq][n];
-    if (cur === b.dataset.av) delete MD.avail[sq][n]; else MD.avail[sq][n] = b.dataset.av;
+    const sq = MD.squad, n = b.dataset.kid;
+    setAnswer(sq, n, b.dataset.av);
     saveMD();
-    const row = b.closest('.kid'), now = MD.avail[sq][n] || '?';
+    const row = b.closest('.kid'), now = b.dataset.av;
     row.querySelectorAll('[data-av]').forEach(x => x.setAttribute('aria-pressed', x.dataset.av === now));
     row.classList.toggle('unk', now === '?');
   });
