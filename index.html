@@ -184,11 +184,16 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .mini button{width:40px;height:40px;border-radius:50%;border:2px solid var(--line);background:var(--card);font-size:20px;font-weight:800}
 .mini span{min-width:56px;text-align:center;font-weight:900}
 .gt{width:100%;border-collapse:collapse;font-size:15px;table-layout:fixed}
-.gt th:first-child,.gt td.nm{width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gt th:first-child,.gt td.nm{width:31%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gt th{font-size:12px;text-align:center;padding:4px 2px;color:var(--ink2)}
 .gt th:first-child{text-align:left}
 .gt td{text-align:center;padding:7px 2px;border-top:1px solid var(--line);font-weight:800}
 .gt td.nm{text-align:left;font-weight:700}
+.gt td.pk,.gt th.pk{width:13%;font-size:12px;font-weight:700;color:var(--ink2);white-space:nowrap}
+.gt .shortn{display:none}
+@media (max-width:560px){ .gt .fulln{display:none} .gt .shortn{display:inline} }
+.fxline{background:var(--card);border-radius:12px;padding:12px 14px;margin:18px 0 0;font-size:16px}
+.fxline a{font-weight:800}
 .gt td.on{color:var(--pitch2)}.gt td.gk{color:var(--cone)}.gt td.sub{color:var(--ink2);font-weight:600;font-size:13px}
 .gt td.na{color:#B8C0CC}.gt td.mins{font-variant-numeric:tabular-nums}
 .form{display:grid;gap:12px}
@@ -1996,7 +2001,7 @@ function renderOverview() {
   const bibNote = !kit.bibs ? 'Not needed' : N.bibs ? `You have ${N.bibs}` : 'None entered';
   box.innerHTML = `
     <div class="plan-top"><button class="back" data-go="setup">‹ Change setup</button>
-      <h1>Tonight's plan</h1><p class="sum">${sumLine}</p></div>
+      <h1>Tonight's plan</h1><p class="sum">${sumLine}${P.shared ? ' Shared by the coach: tap any drill for set-up, animation and step by step.' : ''}</p></div>
     <div class="share-row"><button type="button" class="wa" data-share="wa">${WA_ICON} Share on WhatsApp</button><button type="button" class="copy" data-share="copy">Copy</button></div>
     ${P.notes.concat(LAYOUT.notes).length ? `<ul class="notes">${P.notes.concat(LAYOUT.notes).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
     <div class="strip" aria-hidden="true">${segs.join('')}</div>
@@ -2313,10 +2318,12 @@ function bindSetup() {
    8. START
    ========================================================= */
 function init() {
+  const shared = openSharedPlan();
   renderSetup();
   document.querySelectorAll('.top nav button').forEach(b => b.onclick = () => show(b.dataset.go));
   $('#brand').onclick = () => show('setup');
   requestAnimationFrame(tick);
+  if (shared) { document.querySelector('[data-go="plan"]').disabled = false; renderPlan(); show('plan'); }
 }
 if (typeof document !== 'undefined' && document.getElementById) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
@@ -2349,28 +2356,57 @@ function fallbackCopy(text, done) {
   ta.remove();
 }
 
-/* The session as a WhatsApp message (WhatsApp shows *text* in bold) */
+/* A link that opens this exact plan in the app (the plan is packed into the link) */
+const APP_URL = 'https://doles05.github.io/training-tonight/';
+const BIB_CODE = { Yellow: 'Y', Orange: 'O', Blue: 'B', Green: 'G', Red: 'R', Pink: 'P', White: 'W', Black: 'K' };
+function planLink(P) {
+  const st = P.st, rg = r => r.unknown ? 'u' : `${r.min}-${r.max}`;
+  const bibs = (st.bibSets || []).map(b => (BIB_CODE[b.c] || 'Y') + b.n).join('_');
+  const bits = ['2', rg(st.players), rg(st.coaches), st.balls == null ? 'x' : st.balls, st.pitches || 2, st.length, st.arrival || 0, st.squads ? 1 : 0, bibs || 'x', P.slots.map(s => s.d.id).join('~')];
+  return APP_URL + '#p=' + bits.join('.');
+}
+/* Opening a shared link: rebuild the same plan with the same drills */
+function openSharedPlan() {
+  const m = (location.hash || '').match(/^#p=(.+)$/);
+  if (!m) return false;
+  const b = decodeURIComponent(m[1]).split('.');
+  if (b[0] !== '2' || b.length < 10) return false;
+  const rg = x => { if (x === 'u') return { min: 1, max: 1, unknown: true }; const [a, z] = x.split('-').map(Number); return { min: a, max: z, unknown: false }; };
+  const fromCode = Object.fromEntries(Object.entries(BIB_CODE).map(([k, v]) => [v, k]));
+  Object.assign(S, {
+    players: rg(b[1]), coaches: rg(b[2]), balls: b[3] === 'x' ? null : +b[3], pitches: +b[4], length: +b[5], arrival: +b[6], squads: b[7] === '1',
+    bibSets: b[8] === 'x' ? [] : b[8].split('_').map(t => ({ c: fromCode[t[0]] || 'Yellow', n: +t.slice(1) })), focus: [], favFirst: false
+  });
+  const ids = b[9].split('~');
+  PLAN = buildPlan(S, 1);
+  if (PLAN.slots.length === ids.length) {
+    PLAN.slots.forEach((sl, i) => {
+      const d = byId[ids[i]];
+      if (d) { sl.d = d; sl.nd = needs(d, sl.n, sl.minAreas || 1, sl.maxAreas || 99); }
+    });
+    addKitNotes(PLAN);
+  }
+  PLAN.shared = true;
+  return true;
+}
+
+/* The session as a WhatsApp message: running order plus the link to the full plan */
 function sessionText(P) {
   const st = P.st, L = [];
   LAYOUT = layout(P);
-  const rng2 = (r, u) => r.unknown ? u : (r.min === r.max ? r.min : `${r.min}–${r.max}`);
-  L.push(`⚽ *Training tonight*: ${st.length} minutes, ${rng2(st.players, 'about 14')} players`);
+  L.push(`⚽ *TRAINING TONIGHT* (${st.length} min)`, '');
   P.phases.forEach(ph => {
     const sl = P.slots[ph[0]];
-    L.push('');
     if (ph.length > 1) {
-      const b = P.blocks[sl.block], gs = groupList(b.k, st, P.N.P);
-      L.push(`*${b.start}–${b.end}′ Stations* (${b.R} min each, groups ${joinList(gs.map(g => g.name.replace(/^Group /, '')))} move one station on each time)`);
-      ph.forEach((i, s) => { const d = P.slots[i].d; L.push(`${s + 1}. *${d.name}* (${LAYOUT.at[i]}): ${d.how}`); });
+      const b = P.blocks[sl.block];
+      L.push(`*${b.start}–${b.end}′ Stations* (${b.R} min each, groups move on)`);
+      ph.forEach((i, s) => L.push(`  ${s + 1}. ${P.slots[i].d.name} (${LAYOUT.at[i]})`));
     } else {
       const label = sl.role === 'a' ? 'Arrivals and warm-up' : sl.role === 'w' ? 'Warm-up' : sl.role === 'g' ? 'Final game' : 'Everyone';
-      L.push(`*${sl.start}–${sl.start + sl.mins}′ ${label}: ${sl.d.name}*`);
-      L.push(`📍 ${LAYOUT.at[ph[0]]}`);
-      L.push(sl.d.how);
+      L.push(`*${sl.start}–${sl.start + sl.mins}′ ${label}:* ${sl.d.name}`);
     }
   });
-  const kit = kitTotals(P);
-  L.push('', `🎒 Kit: ${kit.balls} balls, ${kit.cones} cones${kit.bibs ? `, ${kit.bibs} bibs` : ''}`);
+  L.push('', '👉 *Drills, set-up and animations:*', planLink(P));
   return L.join('\n');
 }
 
@@ -2492,38 +2528,82 @@ async function saveFixture(sq, val) {
    level, boys who are there the whole morning go first. A max-flow check makes
    sure each step can actually be fitted into the four halves. */
 function planHalves(tm, size, rand) {
-  const n = tm.length, Q = [0, 1, 2, 3];
+  const n = tm.length, Q = [0, 1, 2, 3], M = [[0, 1], [2, 3]];
   const avail = tm.map(k => quartersFor(k.avail));
+  const isFull = avail.map(a => a.length === 4);
   const cap = Q.map(q => Math.min(size, avail.filter(a => a.includes(q)).length));
-  const solve = dem => {                 // max flow: source → boy (demand) → half (1) → sink (places)
-    const N = n + 6, S = n + 4, T = n + 5, c = Array.from({ length: N }, () => new Array(N).fill(0));
-    tm.forEach((k, i) => { c[S][i] = dem[i]; avail[i].forEach(q => { c[i][n + q] = 1; }); });
-    Q.forEach(q => { c[n + q][T] = cap[q]; });
+  /* max flow. Each boy's halves come from up to three "pots":
+     one half that must be in match 1, one that must be in match 2 (full-morning boys with 2+ halves),
+     and the rest, which can go anywhere he's available. Each boy plays a half at most once. */
+  const solve = (dem, spread) => {
+    const KQ = i => 3 * n + 4 * i, QN = q => 7 * n + q, S = 7 * n + 4, T = 7 * n + 5, N = 7 * n + 6;
+    const c = Array.from({ length: N }, () => new Int16Array(N));
+    tm.forEach((k, i) => {
+      const both = spread[i] && dem[i] >= 2;
+      c[S][i] = both ? 1 : 0; c[S][n + i] = both ? 1 : 0; c[S][2 * n + i] = both ? dem[i] - 2 : dem[i];
+      avail[i].forEach(q => {
+        if (M[0].includes(q)) c[i][KQ(i) + q] = 1; else c[n + i][KQ(i) + q] = 1;
+        c[2 * n + i][KQ(i) + q] = 1;
+        c[KQ(i) + q][QN(q)] = 1;
+      });
+    });
+    Q.forEach(q => { c[QN(q)][T] = cap[q]; });
     let flow = 0;
     for (;;) {
-      const prev = new Array(N).fill(-1); prev[S] = S; const queue = [S];
+      const prev = new Int32Array(N).fill(-1); prev[S] = S; const queue = [S];
       while (queue.length && prev[T] < 0) { const u = queue.shift(); for (let v = 0; v < N; v++) if (prev[v] < 0 && c[u][v] > 0) { prev[v] = u; queue.push(v); } }
       if (prev[T] < 0) break;
       for (let v = T; v !== S; v = prev[v]) { c[prev[v]][v]--; c[v][prev[v]]++; }
       flow++;
     }
-    return { ok: flow === dem.reduce((a, b) => a + b, 0), c };
+    const on = Q.map(() => new Set());
+    tm.forEach((k, i) => avail[i].forEach(q => { if (c[QN(q)][KQ(i) + q] > 0) on[q].add(k.name); }));
+    return { ok: flow === dem.reduce((a, b) => a + b, 0), on };
   };
-  const dem = new Array(n).fill(0), tie = tm.map(() => rand());
+  /* level by level: everyone 1 half, then everyone 2, ... full-morning boys first at each level,
+     and they must play in both matches whenever that can be fitted */
+  const dem = new Array(n).fill(0), spread = new Array(n).fill(false), tie = tm.map(() => rand());   // both-matches is a preference, not a rule
   for (let L = 1; L <= 4; L++) {
     const order = tm.map((k, i) => i).filter(i => avail[i].length >= L)
-      .sort((a, b) => (avail[b].length === 4) - (avail[a].length === 4) || tie[a] - tie[b]);
-    order.forEach(i => { if (dem[i] !== L - 1) return; dem[i] = L; if (!solve(dem).ok) dem[i] = L - 1; });   // only boys who reached the last level move up
+      .sort((a, b) => isFull[b] - isFull[a] || tie[a] - tie[b]);
+    order.forEach(i => {
+      if (dem[i] !== L - 1) return;                 // only boys who reached the last level move up
+      dem[i] = L;
+      if (solve(dem, spread).ok) return;
+      dem[i] = L - 1;
+    });
   }
-  const { c } = solve(dem), on = Q.map(() => new Set()), played = new Map(tm.map(k => [k.name, 0]));
-  tm.forEach((k, i) => avail[i].forEach(q => { if (c[n + q][i] > 0) { on[q].add(k.name); played.set(k.name, played.get(k.name) + 1); } }));
+  const { on } = solve(dem, spread), played = new Map(tm.map(k => [k.name, 0]));
+  Q.forEach(q => on[q].forEach(nm => played.set(nm, played.get(nm) + 1)));
   Q.forEach(q => {                       // any place still free: give it to whoever has played least
     const spare = tm.filter((k, i) => avail[i].includes(q) && !on[q].has(k.name))
       .sort((a, b) => played.get(a.name) - played.get(b.name));
     while (on[q].size < cap[q] && spare.length) { const k = spare.shift(); on[q].add(k.name); played.set(k.name, played.get(k.name) + 1); }
   });
+  /* nice-to-have: a full-morning boy with 2+ halves plays in both matches. Swap halves
+     with another boy only where it costs nobody anything (everyone's total stays the same). */
+  const inMatch = (name, m) => M[m].some(q => on[q].has(name));
+  const spreadOk = i => !isFull[i] || played.get(tm[i].name) < 2 || (inMatch(tm[i].name, 0) && inMatch(tm[i].name, 1));
+  for (let pass = 0; pass < 3; pass++) {
+    tm.forEach((k, i) => {
+      if (spreadOk(i)) return;
+      const empty = inMatch(k.name, 0) ? 1 : 0, busy = 1 - empty;
+      let done = false;
+      for (const q of M[empty]) for (const q2 of M[busy]) {
+        if (done || on[q].has(k.name) || !on[q2].has(k.name)) continue;
+        for (const other of [...on[q]]) {
+          const j = tm.findIndex(x => x.name === other);
+          if (!avail[j].includes(q2) || on[q2].has(other)) continue;
+          on[q].delete(other); on[q2].add(other); on[q2].delete(k.name); on[q].add(k.name);
+          if (spreadOk(j)) { done = true; break; }
+          on[q2].delete(other); on[q].add(other); on[q].delete(k.name); on[q2].add(k.name);   // undo
+        }
+      }
+    });
+  }
   return { on, played };
 }
+
 function allocate(kids, size, seed, fixed) {
   const rand = rng(seed);
   const avail = kids.filter(k => quartersFor(k.avail).length);
@@ -2544,24 +2624,18 @@ function allocate(kids, size, seed, fixed) {
   const notes = [], short = [];
   const result = teams.map((tm, ti) => {
     const { on, played } = planHalves(tm, size, rand);
-    const gk = new Map(tm.map(k => [k.name, 0])), tie = new Map(tm.map(k => [k.name, rand()]));
     const quarters = [0, 1, 2, 3].map(q => {
       const here = tm.filter(k => quartersFor(k.avail).includes(q));
       const onq = here.filter(k => on[q].has(k.name)), bench = here.filter(k => !on[q].has(k.name));
-      let keeper = null;
-      if (onq.length) {                      // keeper: whoever has been in goal least
-        keeper = onq.slice().sort((a, b) => gk.get(a.name) - gk.get(b.name) || tie.get(a.name) - tie.get(b.name))[0].name;
-        gk.set(keeper, gk.get(keeper) + 1);
-      }
       if (onq.length < size && tm.length) (short[ti] = short[ti] || []).push({ q, n: onq.length });
-      return { on: onq.map(k => k.name), bench: bench.map(k => k.name), keeper };
+      return { on: onq.map(k => k.name), bench: bench.map(k => k.name) };
     });
     /* very rare: a boy who'd get no game at all shares a half (6 mins each) with a boy playing most */
     tm.forEach(k => {
       if (played.get(k.name) > 0 || !quartersFor(k.avail).length) return;
       let best = null;
       quartersFor(k.avail).forEach(q => quarters[q].on.forEach(d => {
-        if (d === quarters[q].keeper || (quarters[q].split || []).some(s => s.out === d)) return;
+        if ((quarters[q].split || []).some(s => s.out === d)) return;
         if (!best || played.get(d) > played.get(best.d)) best = { q, d };
       }));
       if (!best || played.get(best.d) < 1) return;
@@ -2571,7 +2645,7 @@ function allocate(kids, size, seed, fixed) {
       played.set(best.d, played.get(best.d) - 0.5); played.set(k.name, 0.5);
       notes.push(`${k.name} and ${best.d} share ${PERIODS[best.q].toLowerCase()} (${MD.half / 2} mins each), so everyone gets a game.`);
     });
-    return { kids: tm, quarters, played, gk };
+    return { kids: tm, quarters, played };
   });
   const parts = [];
   short.forEach((list, ti) => {
@@ -2583,22 +2657,44 @@ function allocate(kids, size, seed, fixed) {
   if (parts.length) notes.push(`Short for ${size}-a-side: ${parts.join('; ')}. Play a man down or borrow a player.`);
   return { teams: result, notes };
 }
+/* first names for the line-up, with an initial (or more letters) only where two boys share a first name */
+function firstNames(names) {
+  const out = new Map();
+  names.forEach(n => {
+    const [first, ...rest] = n.split(' '), sur = rest.join(' ');
+    const twins = names.filter(o => o !== n && o.split(' ')[0] === first);
+    if (!twins.length || !sur) { out.set(n, first); return; }
+    for (let len = 1; len <= sur.length; len++) {
+      const bit = sur.slice(0, len);
+      if (!twins.some(o => o.split(' ').slice(1).join(' ').slice(0, len) === bit)) { out.set(n, `${first} ${bit}.`); return; }
+    }
+    out.set(n, n);
+  });
+  return out;
+}
+/* the Saturday-morning WhatsApp: who's on and who's ready to come on, half by half */
 function lineupText(res) {
   const sq = MD_RESULT.squad, f = fixtureFor(sq);
-  const L = [`⚽ *${SQUAD_LABEL[sq]}: Saturday game time* (halves of ${MD.half} min)`];
-  if (f) { L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}${f.meet ? '. Meet ' + f.meet : ''}${f.ko ? ', kick-off ' + f.ko : ''}`); if (placeQuery(f) || f.map) L.push(mapUrl(f)); }
+  const fn = firstNames(res.teams.flatMap(t => t.kids.map(k => k.name)));
+  const nm = n => fn.get(n) || n;
+  const day = f ? dateText(f.date).toUpperCase() : 'SATURDAY';
+  const L = [`${sq === 'Greens' ? '🟢' : '🔴'} *${sq.toUpperCase()}: ${day}*`];
+  if (f) {
+    L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}`);
+    if (f.meet || f.ko) L.push([f.meet ? `Meet ${f.meet}` : '', f.ko ? `kick-off ${f.ko}` : ''].filter(Boolean).join(', '));
+  }
   res.teams.forEach((t, ti) => {
-    L.push('', `*${sq} ${ti + 1}*`);
+    if (!t.kids.length) return;
+    L.push('', `*━━ ${sq.toUpperCase()} ${ti + 1} ━━*`);
     t.quarters.forEach((q, i) => {
       if (!q.on.length) return;
       const on = q.on.map(n => {
         const sp = (q.split || []).find(s => s.out === n);
-        if (sp) return `${n} (first ${MD.half / 2} min) / ${sp.in} (last ${MD.half / 2} min)`;
-        return n === q.keeper ? `${n} (GK)` : n;
-      }).join(', ');
-      L.push(`${PERIODS[i]}: ${on}${q.bench.length ? `. Sub: ${q.bench.join(', ')}` : ''}`);
+        return sp ? `${nm(n)} / ${nm(sp.in)} (${MD.half / 2} min each)` : nm(n);
+      });
+      L.push('', `*${PERIODS[i]}*`, on.join(', '));
+      if (q.bench.length) L.push(`Subs: ${q.bench.map(nm).join(', ')}`);
     });
-    L.push('Minutes: ' + t.kids.map(k => `${k.name} ${t.played.get(k.name) * MD.half}`).join(', '));
   });
   return L.join('\n');
 }
@@ -2615,6 +2711,26 @@ function teamOf(name) {
   if (!MD_RESULT) return '';
   const i = MD_RESULT.res.teams.findIndex(t => t.kids.some(k => k.name === name));
   return i < 0 ? '' : `${MD_RESULT.squad} ${i + 1}`;
+}
+
+/* short names for the phone table: first name + surname initial, more letters where two boys would clash */
+function shortNames(names) {
+  const out = new Map();
+  names.forEach(n => {
+    const [first, ...rest] = n.split(' '), sur = rest.join(' ');
+    if (!sur) { out.set(n, n); return; }
+    for (let len = 1; len <= sur.length; len++) {
+      const s = `${first} ${sur.slice(0, len)}.`;
+      const clash = names.some(o => o !== n && o.split(' ')[0] === first && o.split(' ').slice(1).join(' ').slice(0, len) === sur.slice(0, len));
+      if (!clash) { out.set(n, s); return; }
+    }
+    out.set(n, n);
+  });
+  return out;
+}
+/* what the boy picked, shown beside his name in the table */
+function choiceLabel(k) {
+  return k.guest ? 'Late' : { full: 'Full', first: 'M1 only', second: 'M2 only' }[k.avail] || '';
 }
 
 /* --- the Match tab --- */
@@ -2741,25 +2857,25 @@ function renderMatch() {
 function renderResult() {
   const box = $('#mdResult'), res = MD_RESULT.res, sq = MD_RESULT.squad, f = fixtureFor(sq);
   const all = kidsFor(sq), playing = all.filter(k => quartersFor(k.avail).length), notPlaying = all.filter(k => !quartersFor(k.avail).length);
+  const shorts = shortNames(all.map(k => k.name));
   const notMarked = kidsFor(sq).filter(k => k.avail === '?').map(k => k.name);
   const notes = res.notes.slice();
   if (notMarked.length) notes.unshift(`No reply yet from ${joinList(notMarked)}, so ${notMarked.length === 1 ? 'he\u2019s' : 'they\u2019re'} left out. Late answer? Add him under Late changes.`);
   box.innerHTML = `
-    ${f ? `<div class="panel">${fixtureCard(sq, f)}</div>` : ''}
+    ${f ? `<p class="fxline"><b>v ${esc(f.opp || 'TBC')}</b>${f.venue ? `, ${esc(f.venue)}` : ''}${f.meet ? `. Meet ${esc(f.meet)}` : ''}${f.ko ? `, kick-off ${esc(f.ko)}` : ''}. ${placeQuery(f) || f.map ? `<a href="${esc(mapUrl(f))}" target="_blank" rel="noopener">Map</a>` : ''}</p>` : ''}
     ${notes.length ? `<ul class="notes">${notes.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
     ${res.teams.map((t, ti) => `
       <div class="panel"><h2>${sq} ${ti + 1}</h2>
         <div class="rota-wrap"><table class="gt">
-          <thead><tr><th>Player</th>${PERIOD_SHORT.map(p => `<th>${p}</th>`).join('')}<th>Mins</th></tr></thead>
-          <tbody>${t.kids.map(k => `<tr><td class="nm">${esc(k.name)}</td>${t.quarters.map((q, qi) => {
+          <thead><tr><th>Player</th><th class="pk">Picked</th>${PERIOD_SHORT.map(p => `<th>${p}</th>`).join('')}<th>Mins</th></tr></thead>
+          <tbody>${t.kids.map(k => `<tr><td class="nm" title="${esc(k.name)}"><span class="fulln">${esc(k.name)}</span><span class="shortn">${esc(shorts.get(k.name) || k.name)}</span></td><td class="pk">${esc(choiceLabel(k))}</td>${t.quarters.map((q, qi) => {
             if (!quartersFor(k.avail).includes(qi)) return '<td class="na">·</td>';
-            if (q.keeper === k.name) return '<td class="gk">GK</td>';
             const sp = (q.split || []).find(s => s.in === k.name || s.out === k.name);
             if (sp) return `<td class="on" title="Shares this half">½</td>`;
             return q.on.includes(k.name) ? '<td class="on">✓</td>' : '<td class="sub">Sub</td>';
           }).join('')}<td class="mins">${t.played.get(k.name) * MD.half}</td></tr>`).join('')}</tbody>
         </table></div></div>`).join('')}
-    <p class="small-note">✓ playing, GK in goal, ½ shares the half, Sub on the bench, · not there.</p>
+    <p class="small-note">✓ playing, ½ shares the half, · not there. <b>Picked</b> = what the parent chose. <b>Sub</b> = on the bench and ready: knocks and tired legs mean extra minutes, so subs stay with the team.</p>
     <div class="share-row" style="margin-top:12px"><button type="button" class="wa" data-act="lineupwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="lineupcopy">Copy</button></div>
     <button type="button" class="swap" data-act="shuffle" style="margin-top:12px">Shuffle the two teams</button>
     <div class="panel late"><h2>Late changes</h2>
