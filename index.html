@@ -2430,25 +2430,25 @@ const PIN_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-
 
 function fixtureCard(sq, f) {
   return `<div class="fixture ${sq}"><div class="when">${esc(SQUAD_LABEL[sq])} · ${esc(dateText(f.date))}</div>
+    <div class="frow">${f.meet ? `<div><b>Meet at</b>${esc(f.meet)}</div>` : ''}${f.ko ? `<div><b>Kick-off</b>${esc(f.ko)}</div>` : ''}</div>
     <div class="vs">v ${esc(f.opp || 'Opposition to be confirmed')}</div>
     ${f.venue ? `<div class="venue">${esc(f.venue)}</div>` : ''}
-    <div class="frow">${f.meet ? `<div><b>Meet</b>${esc(f.meet)}</div>` : ''}${f.ko ? `<div><b>Kick-off</b>${esc(f.ko)}</div>` : ''}</div>
     ${placeQuery(f) ? mapFrame(placeQuery(f)) : ''}
     ${placeQuery(f) || f.map ? `<a class="maplink" href="${esc(mapUrl(f))}" target="_blank" rel="noopener">${PIN_ICON}Open in Google Maps</a>` : ''}</div>`;
 }
 /* The WhatsApp message for parents: the fixture plus the link */
 function parentsMessage(sq) {
-  const f = fixtureFor(sq), L = [];
+  const f = fixtureFor(sq), L = [`${sq === 'Greens' ? '🟢' : '🔴'} *${SQUAD_LABEL[sq].toUpperCase()}: THIS SATURDAY*`, ''];
   if (f) {
-    L.push(`${sq === 'Greens' ? '🟢' : '🔴'} *${SQUAD_LABEL[sq].toUpperCase()} FIXTURE* - ${dateText(f.date)}`, '');
-    if (f.opp) L.push(`Opposition: ${f.opp}`);
-    if (f.venue) L.push(`Venue: ${f.venue}${f.eircode ? ' (' + f.eircode + ')' : ''}`);
-    if (f.meet) L.push(`Meeting time: ${f.meet}`);
-    if (f.ko) L.push(`Kick-off: ${f.ko}`);
-    if (placeQuery(f) || f.map) L.push(`Map: ${mapUrl(f)}`);
+    L.push(`📅 *Date:* ${dateText(f.date)}`);
+    L.push(`⚽ *Opposition:* ${f.opp || 'to be confirmed'}`);
+    if (f.meet) L.push(`⏰ *Meet at:* ${f.meet}`);
+    if (f.ko) L.push(`🕚 *Kick-off:* ${f.ko}`);
+    if (f.venue) L.push(`📍 *Venue:* ${f.venue}${f.eircode ? ' (' + f.eircode + ')' : ''}`);
+    if (placeQuery(f) || f.map) L.push(`🗺️ *Map:* ${mapUrl(f)}`);
     L.push('');
   }
-  L.push('Can your son play? Tap here and pick his name:', PARENTS_URL);
+  L.push('👉 *PLEASE CONFIRM IF YOUR SON CAN PLAY*', 'Tap the link, pick his name and how long he can play. Takes 10 seconds:', PARENTS_URL);
   return L.join('\n');
 }
 
@@ -2524,12 +2524,12 @@ function renderMatch() {
       ${showForm ? `
       <div class="form">
         <label>Date<input type="date" id="fxDate" value="${esc(fdate)}"></label>
+        <div class="two"><label>Meet at<input type="time" id="fxMeet" value="${esc(f.meet || '')}"></label><label>Kick-off<input type="time" id="fxKo" value="${esc(f.ko || '')}"></label></div>
         <label>Opposition<input type="text" id="fxOpp" value="${esc(f.opp || '')}" placeholder="e.g. Enniskerry" autocomplete="off"></label>
         <label>Venue<input type="text" id="fxVenue" value="${esc(f.venue || '')}" placeholder="e.g. Hudson Park, Glasthule" autocomplete="off"></label>
         ${(BOX.info.venues || []).length ? `<div class="chips venues"><span class="opt-l">Used before:</span>${BOX.info.venues.map((vn, i) => `<button type="button" class="chip small" data-venue="${i}">${esc(vn.venue)}</button>`).join('')}</div>` : ''}
         <label>Eircode <span class="opt-l">(optional, for an exact pin)</span><input type="text" id="fxEir" value="${esc(f.eircode || '')}" placeholder="e.g. A96 XXXX" autocomplete="off" autocapitalize="characters"></label>
         <div id="fxMapPreview">${mapFrame(placeQuery({ venue: f.venue, eircode: f.eircode }))}</div>
-        <div class="two"><label>Meet<input type="time" id="fxMeet" value="${esc(f.meet || '')}"></label><label>Kick-off<input type="time" id="fxKo" value="${esc(f.ko || '')}"></label></div>
       </div>
       <button type="button" class="swap" data-act="savefix" style="margin-top:12px">Save match</button>
       ${live ? '<button type="button" class="back" data-act="cancelfix">Cancel</button>' : ''}`
