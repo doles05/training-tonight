@@ -2529,27 +2529,19 @@ async function saveFixture(sq, val) {
    anyone gets 2, everyone 2 before anyone 3... When there isn't room for all at a
    level, boys who are there the whole morning go first. A max-flow check makes
    sure each step can actually be fitted into the four halves. */
-function planHalves(tm, size, rand) {
-  const n = tm.length, Q = [0, 1, 2, 3], M = [[0, 1], [2, 3]];
-  const avail = tm.map(k => quartersFor(k.avail));
-  const isFull = avail.map(a => a.length === 4);
-  const cap = Q.map(q => Math.min(size, avail.filter(a => a.includes(q)).length));
-  /* max flow. Each boy's halves come from up to three "pots":
-     one half that must be in match 1, one that must be in match 2 (full-morning boys with 2+ halves),
-     and the rest, which can go anywhere he's available. Each boy plays a half at most once. */
-  const solve = (dem, spread) => {
-    const KQ = i => 3 * n + 4 * i, QN = q => 7 * n + q, S = 7 * n + 4, T = 7 * n + 5, N = 7 * n + 6;
-    const c = Array.from({ length: N }, () => new Int16Array(N));
-    tm.forEach((k, i) => {
-      const both = spread[i] && dem[i] >= 2;
-      c[S][i] = both ? 1 : 0; c[S][n + i] = both ? 1 : 0; c[S][2 * n + i] = both ? dem[i] - 2 : dem[i];
-      avail[i].forEach(q => {
-        if (M[0].includes(q)) c[i][KQ(i) + q] = 1; else c[n + i][KQ(i) + q] = 1;
-        c[2 * n + i][KQ(i) + q] = 1;
-        c[KQ(i) + q][QN(q)] = 1;
-      });
-    });
-    Q.forEach(q => { c[QN(q)][T] = cap[q]; });
+/* Plan P equal slots (4 = whole halves, 8 = 6-minute slots).
+   Level by level: everyone gets 1 slot before anyone gets 2, and so on.
+   Full-morning boys go first at each level, so they never play less than part-timers.
+   A max-flow check makes sure each step really fits. */
+function planSlots(tm, size, rand, P) {
+  const n = tm.length, slots = [...Array(P).keys()], perQ = P / 4;
+  const avail = tm.map(k => quartersFor(k.avail).flatMap(q => perQ === 1 ? [q] : [2 * q, 2 * q + 1]));
+  const isFull = avail.map(a => a.length === P);
+  const cap = slots.map(s => Math.min(size, avail.filter(a => a.includes(s)).length));
+  const solve = dem => {
+    const S = n + P, T = n + P + 1, N = n + P + 2, c = Array.from({ length: N }, () => new Int16Array(N));
+    tm.forEach((k, i) => { c[S][i] = dem[i]; avail[i].forEach(s => { c[i][n + s] = 1; }); });
+    slots.forEach(s => { c[n + s][T] = cap[s]; });
     let flow = 0;
     for (;;) {
       const prev = new Int32Array(N).fill(-1); prev[S] = S; const queue = [S];
@@ -2558,62 +2550,55 @@ function planHalves(tm, size, rand) {
       for (let v = T; v !== S; v = prev[v]) { c[prev[v]][v]--; c[v][prev[v]]++; }
       flow++;
     }
-    const on = Q.map(() => new Set());
-    tm.forEach((k, i) => avail[i].forEach(q => { if (c[QN(q)][KQ(i) + q] > 0) on[q].add(k.name); }));
+    const on = slots.map(() => new Set());
+    tm.forEach((k, i) => avail[i].forEach(s => { if (c[n + s][i] > 0) on[s].add(k.name); }));
     return { ok: flow === dem.reduce((a, b) => a + b, 0), on };
   };
-  /* level by level: everyone 1 half, then everyone 2, ... full-morning boys first at each level,
-     and they must play in both matches whenever that can be fitted */
-  const dem = new Array(n).fill(0), spread = new Array(n).fill(false), tie = tm.map(() => rand());   // both-matches is a preference, not a rule
-  for (let L = 1; L <= 4; L++) {
-    const order = tm.map((k, i) => i).filter(i => avail[i].length >= L)
-      .sort((a, b) => isFull[b] - isFull[a] || tie[a] - tie[b]);
-    order.forEach(i => {
-      if (dem[i] !== L - 1) return;                 // only boys who reached the last level move up
-      dem[i] = L;
-      if (solve(dem, spread).ok) return;
-      dem[i] = L - 1;
-    });
+  const dem = new Array(n).fill(0), tie = tm.map(() => rand());
+  for (let L = 1; L <= P; L++) {
+    tm.map((k, i) => i).filter(i => avail[i].length >= L)
+      .sort((a, b) => isFull[b] - isFull[a] || tie[a] - tie[b])
+      .forEach(i => { if (dem[i] !== L - 1) return; dem[i] = L; if (!solve(dem).ok) dem[i] = L - 1; });
   }
-  const { on } = solve(dem, spread), played = new Map(tm.map(k => [k.name, 0]));
-  Q.forEach(q => on[q].forEach(nm => played.set(nm, played.get(nm) + 1)));
-  Q.forEach(q => {                       // any place still free: give it to whoever has played least
-    const spare = tm.filter((k, i) => avail[i].includes(q) && !on[q].has(k.name))
-      .sort((a, b) => played.get(a.name) - played.get(b.name));
-    while (on[q].size < cap[q] && spare.length) { const k = spare.shift(); on[q].add(k.name); played.set(k.name, played.get(k.name) + 1); }
+  const { on } = solve(dem), count = new Map(tm.map(k => [k.name, 0]));
+  slots.forEach(s => on[s].forEach(nm => count.set(nm, count.get(nm) + 1)));
+  slots.forEach(s => {                    // any place still free: whoever has played least
+    const spare = tm.filter((k, i) => avail[i].includes(s) && !on[s].has(k.name)).sort((a, b) => count.get(a.name) - count.get(b.name));
+    while (on[s].size < cap[s] && spare.length) { const k = spare.shift(); on[s].add(k.name); count.set(k.name, count.get(k.name) + 1); }
   });
-  /* nice-to-have: a full-morning boy with 2+ halves plays in both matches. Swap halves
-     with another boy only where it costs nobody anything (everyone's total stays the same). */
-  const inMatch = (name, m) => M[m].some(q => on[q].has(name));
-  const spreadOk = i => !isFull[i] || played.get(tm[i].name) < 2 || (inMatch(tm[i].name, 0) && inMatch(tm[i].name, 1));
-  for (let pass = 0; pass < 3; pass++) {
-    tm.forEach((k, i) => {
-      if (spreadOk(i)) return;
-      const empty = inMatch(k.name, 0) ? 1 : 0, busy = 1 - empty;
-      let done = false;
-      for (const q of M[empty]) for (const q2 of M[busy]) {
-        if (done || on[q].has(k.name) || !on[q2].has(k.name)) continue;
-        for (const other of [...on[q]]) {
-          const j = tm.findIndex(x => x.name === other);
-          if (!avail[j].includes(q2) || on[q2].has(other)) continue;
-          on[q].delete(other); on[q2].add(other); on[q2].delete(k.name); on[q].add(k.name);
-          if (spreadOk(j)) { done = true; break; }
-          on[q2].delete(other); on[q].add(other); on[q].delete(k.name); on[q2].add(k.name);   // undo
-        }
+  /* nice-to-have: full-morning boys play in both matches, by swapping slots where it costs nobody anything */
+  const M = [slots.slice(0, P / 2), slots.slice(P / 2)], inMatch = (nm, m) => M[m].some(s => on[s].has(nm));
+  const spreadOk = i => !isFull[i] || count.get(tm[i].name) < 2 || (inMatch(tm[i].name, 0) && inMatch(tm[i].name, 1));
+  for (let pass = 0; pass < 3; pass++) tm.forEach((k, i) => {
+    if (spreadOk(i)) return;
+    const empty = inMatch(k.name, 0) ? 1 : 0, busy = 1 - empty;
+    let done = false;
+    for (const s of M[empty]) for (const s2 of M[busy]) {
+      if (done || on[s].has(k.name) || !on[s2].has(k.name)) continue;
+      for (const other of [...on[s]]) {
+        const j = tm.findIndex(x => x.name === other);
+        if (!avail[j].includes(s2) || on[s2].has(other)) continue;
+        on[s].delete(other); on[s2].add(other); on[s2].delete(k.name); on[s].add(k.name);
+        if (spreadOk(j)) { done = true; break; }
+        on[s2].delete(other); on[s].add(other); on[s].delete(k.name); on[s2].add(k.name);
       }
-    });
-  }
-  return { on, played };
+    }
+  });
+  return on;
 }
 
-function allocate(kids, size, seed, fixed) {
+/* Fair split of the morning. Boys stay with one team all morning.
+   mode: 'best' = whole halves, plus 6-minute splits only where needed to even out playing time
+         'twelve' = whole halves only (a split only if a boy would otherwise get nothing)
+         'six' = everyone changes every 6 minutes
+   Internally each half is two 6-minute segments (8 in all). */
+function allocate(kids, size, seed, fixed, mode) {
+  mode = mode || 'best';
   const rand = rng(seed);
   const avail = kids.filter(k => quartersFor(k.avail).length);
   const order = avail.map(k => ({ k, r: rand() }))
     .sort((a, b) => quartersFor(a.k.avail).length - quartersFor(b.k.avail).length || a.r - b.r).map(o => o.k);
-  const teams = [[], []], cnt = [[0, 0, 0, 0], [0, 0, 0, 0]];
-  /* late changes: boys already placed stay on their team */
-  const free = [];
+  const teams = [[], []], cnt = [[0, 0, 0, 0], [0, 0, 0, 0]], free = [];
   order.forEach(k => {
     if (fixed && fixed.has(k.name)) { const t = fixed.get(k.name); teams[t].push(k); quartersFor(k.avail).forEach(x => cnt[t][x]++); }
     else free.push(k);
@@ -2624,28 +2609,32 @@ function allocate(kids, size, seed, fixed) {
     teams[t].push(k); q.forEach(x => cnt[t][x]++);
   });
   const notes = [], short = [];
+  let splits = 0;
   const result = teams.map((tm, ti) => {
-    const { on, played } = planHalves(tm, size, rand);
+    const P = mode === 'six' ? 8 : 4, on = planSlots(tm, size, rand, P);
+    const seg = [...Array(8).keys()].map(s => new Set(P === 8 ? on[s] : on[s >> 1]));
+    const segAvail = k => quartersFor(k.avail).flatMap(q => [2 * q, 2 * q + 1]);
+    const segCount = nm => seg.reduce((a, S) => a + (S.has(nm) ? 1 : 0), 0);
+    /* move the last 6 minutes of a half from the boy playing most to the boy playing least */
+    const evenOut = (group, minGap) => {
+      for (let guard = 0; guard < 40; guard++) {
+        const sorted = group.slice().sort((a, b) => segCount(b.name) - segCount(a.name));
+        const hi = sorted[0], lo = sorted[sorted.length - 1];
+        if (!hi || segCount(hi.name) - segCount(lo.name) < minGap) return;
+        const s = [7, 5, 3, 1, 6, 4, 2, 0].find(x => seg[x].has(hi.name) && !seg[x].has(lo.name) && segAvail(lo).includes(x));
+        if (s == null) return;
+        seg[s].delete(hi.name); seg[s].add(lo.name); splits++;
+      }
+    };
+    if (mode === 'best') ['full', 'first', 'second'].forEach(a => { const g = tm.filter(k => k.avail === a); if (g.length > 1) evenOut(g, 2); });
+    if (mode !== 'six') tm.forEach(k => { if (quartersFor(k.avail).length && segCount(k.name) === 0) evenOut([k].concat(tm.filter(x => x !== k)), 2); });
+    const played = new Map(tm.map(k => [k.name, segCount(k.name) / 2]));
     const quarters = [0, 1, 2, 3].map(q => {
-      const here = tm.filter(k => quartersFor(k.avail).includes(q));
-      const onq = here.filter(k => on[q].has(k.name)), bench = here.filter(k => !on[q].has(k.name));
-      if (onq.length < size && tm.length) (short[ti] = short[ti] || []).push({ q, n: onq.length });
-      return { on: onq.map(k => k.name), bench: bench.map(k => k.name) };
-    });
-    /* very rare: a boy who'd get no game at all shares a half (6 mins each) with a boy playing most */
-    tm.forEach(k => {
-      if (played.get(k.name) > 0 || !quartersFor(k.avail).length) return;
-      let best = null;
-      quartersFor(k.avail).forEach(q => quarters[q].on.forEach(d => {
-        if ((quarters[q].split || []).some(s => s.out === d)) return;
-        if (!best || played.get(d) > played.get(best.d)) best = { q, d };
-      }));
-      if (!best || played.get(best.d) < 1) return;
-      const qq = quarters[best.q];
-      (qq.split = qq.split || []).push({ out: best.d, in: k.name });
-      qq.bench = qq.bench.filter(n => n !== k.name);
-      played.set(best.d, played.get(best.d) - 0.5); played.set(k.name, 0.5);
-      notes.push(`${k.name} and ${best.d} share ${PERIODS[best.q].toLowerCase()} (${MD.half / 2} mins each), so everyone gets a game.`);
+      const here = tm.filter(k => quartersFor(k.avail).includes(q)).map(k => k.name);
+      const a = here.filter(n => seg[2 * q].has(n)), b = here.filter(n => seg[2 * q + 1].has(n));
+      const both = here.filter(n => seg[2 * q].has(n) || seg[2 * q + 1].has(n));
+      if (Math.min(a.length, b.length) < size && tm.length) (short[ti] = short[ti] || []).push({ q, n: Math.min(a.length, b.length) });
+      return { a, b, on: both, bench: here.filter(n => !both.includes(n)), here, same: a.length === b.length && a.every(n => b.includes(n)) };
     });
     return { kids: tm, quarters, played };
   });
@@ -2653,52 +2642,11 @@ function allocate(kids, size, seed, fixed) {
   short.forEach((list, ti) => {
     if (!list) return;
     const least = Math.min(...list.map(x => x.n));
-    const where = list.length === 4 ? 'every half' : joinList(list.map(x => PERIOD_SHORT[x.q]));
-    parts.push(`Team ${ti + 1} has only ${least} in ${where}`);
+    parts.push(`Team ${ti + 1} has only ${least} in ${list.length === 4 ? 'every half' : joinList(list.map(x => PERIOD_SHORT[x.q]))}`);
   });
   if (parts.length) notes.push(`Short for ${size}-a-side: ${parts.join('; ')}. Play a man down or borrow a player.`);
+  if (mode === 'best' && splits) notes.push(`To keep playing time even, ${splits === 1 ? 'one half is' : splits + ' halves are'} shared: one boy plays the first ${MD.half / 2} minutes, another the last ${MD.half / 2} (marked ½).`);
   return { teams: result, notes };
-}
-/* first names for the line-up, with an initial (or more letters) only where two boys share a first name */
-function firstNames(names) {
-  const out = new Map();
-  names.forEach(n => {
-    const [first, ...rest] = n.split(' '), sur = rest.join(' ');
-    const twins = names.filter(o => o !== n && o.split(' ')[0] === first);
-    if (!twins.length || !sur) { out.set(n, first); return; }
-    for (let len = 1; len <= sur.length; len++) {
-      const bit = sur.slice(0, len);
-      if (!twins.some(o => o.split(' ').slice(1).join(' ').slice(0, len) === bit)) { out.set(n, `${first} ${bit}.`); return; }
-    }
-    out.set(n, n);
-  });
-  return out;
-}
-/* the Saturday-morning WhatsApp: who's on and who's ready to come on, half by half */
-function lineupText(res) {
-  const sq = MD_RESULT.squad, f = fixtureFor(sq);
-  const fn = firstNames(res.teams.flatMap(t => t.kids.map(k => k.name)));
-  const nm = n => fn.get(n) || n;
-  const day = f ? dateText(f.date).toUpperCase() : 'SATURDAY';
-  const L = [`${sq === 'Greens' ? '🟢' : '🔴'} *${sq.toUpperCase()}: ${day}*`];
-  if (f) {
-    L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}`);
-    if (f.meet || f.ko) L.push([f.meet ? `Meet ${f.meet}` : '', f.ko ? `kick-off ${f.ko}` : ''].filter(Boolean).join(', '));
-  }
-  res.teams.forEach((t, ti) => {
-    if (!t.kids.length) return;
-    L.push('', `*━━ ${sq.toUpperCase()} ${ti + 1} ━━*`);
-    t.quarters.forEach((q, i) => {
-      if (!q.on.length) return;
-      const on = q.on.map(n => {
-        const sp = (q.split || []).find(s => s.out === n);
-        return sp ? `${nm(n)} / ${nm(sp.in)} (${MD.half / 2} min each)` : nm(n);
-      });
-      L.push('', `*${PERIODS[i]}*`, on.join(', '));
-      if (q.bench.length) L.push(`Subs: ${q.bench.map(nm).join(', ')}`);
-    });
-  });
-  return L.join('\n');
 }
 
 const LATE_OPTS = [['full', 'Full'], ['first', 'Match 1'], ['second', 'Match 2']];
@@ -2711,11 +2659,13 @@ function addGuest(a) {
   MD.guests[sq] = (MD.guests[sq] || []).concat({ name: n, t: Date.now() }); setAnswer(sq, n, a);
   regenKeepingTeams(null); toast(`${n} added to ${teamOf(n)}. Game time redone.`);
 }
+const MODES = [['best', 'Best fit'], ['twelve', `${12} min`], ['six', `${6} min`]];
+const modeFor = sq => (MD.mode && MD.mode[sq]) || 'best';
 /* redo the game time after a late change, keeping everyone on their team */
 function regenKeepingTeams(msg) {
   const sq = MD.squad, fixed = new Map();
   if (MD_RESULT && MD_RESULT.squad === sq) MD_RESULT.res.teams.forEach((t, ti) => t.kids.forEach(k => fixed.set(k.name, ti)));
-  MD_RESULT = { squad: sq, res: allocate(kidsFor(sq), MD.size, MD.seed, fixed) };
+  MD_RESULT = { squad: sq, res: allocate(kidsFor(sq), MD.size, MD.seed, fixed, modeFor(sq)) };
   saveMD(); renderResult();
   if (msg) toast(msg);
 }
@@ -2743,6 +2693,49 @@ function shortNames(names) {
 /* what the boy picked, shown beside his name in the table */
 function choiceLabel(k) {
   return k.guest ? 'Late' : { full: 'Full', first: 'M1 only', second: 'M2 only' }[k.avail] || '';
+}
+
+/* first names for the line-up, with an initial (or more letters) only where two boys share a first name */
+function firstNames(names) {
+  const out = new Map();
+  names.forEach(n => {
+    const [first, ...rest] = n.split(' '), sur = rest.join(' ');
+    const twins = names.filter(o => o !== n && o.split(' ')[0] === first);
+    if (!twins.length || !sur) { out.set(n, first); return; }
+    for (let len = 1; len <= sur.length; len++) {
+      const bit = sur.slice(0, len);
+      if (!twins.some(o => o.split(' ').slice(1).join(' ').slice(0, len) === bit)) { out.set(n, `${first} ${bit}.`); return; }
+    }
+    out.set(n, n);
+  });
+  return out;
+}
+/* the Saturday-morning WhatsApp: who's on and who's ready to come on, half by half */
+function lineupText(res) {
+  const sq = MD_RESULT.squad, f = fixtureFor(sq), h = MD.half / 2;
+  const fn = firstNames(res.teams.flatMap(t => t.kids.map(k => k.name)));
+  const nm = n => fn.get(n) || n;
+  const day = f ? dateText(f.date).toUpperCase() : 'SATURDAY';
+  const L = [`${sq === 'Greens' ? '🟢' : '🔴'} *${sq.toUpperCase()}: ${day}*`];
+  if (f) {
+    L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}`);
+    if (f.meet || f.ko) L.push([f.meet ? `Meet ${f.meet}` : '', f.ko ? `kick-off ${f.ko}` : ''].filter(Boolean).join(', '));
+  }
+  const block = (title, on, here) => {
+    L.push('', `*${title}*`, on.map(nm).join(', '));
+    const subs = here.filter(n => !on.includes(n));
+    if (subs.length) L.push(`Subs: ${subs.map(nm).join(', ')}`);
+  };
+  res.teams.forEach((t, ti) => {
+    if (!t.kids.length) return;
+    L.push('', `*━━ ${sq.toUpperCase()} ${ti + 1} ━━*`);
+    t.quarters.forEach((q, i) => {
+      if (!q.here.length) return;
+      if (q.same) block(PERIODS[i], q.a, q.here);
+      else { block(`${PERIODS[i]} (first ${h} min)`, q.a, q.here); block(`${PERIODS[i]} (last ${h} min)`, q.b, q.here); }
+    });
+  });
+  return L.join('\n');
 }
 
 /* --- the Match tab --- */
@@ -2840,6 +2833,9 @@ function renderMatch() {
         <p class="small-note">Parents\u2019 answers fill in by themselves. Tap to change one, e.g. if a parent texts you.</p>` : ''}
     </div>
 
+    <div class="panel modes"><h2>Change every</h2>
+      <div class="chips">${MODES.map(([m, l]) => `<button type="button" class="chip" data-mode="${m}" aria-pressed="${modeFor(sq) === m}">${m === 'twelve' ? MD.half + ' min' : m === 'six' ? MD.half / 2 + ' min' : l}</button>`).join('')}</div>
+      <p class="small-note">${modeFor(sq) === 'best' ? 'Whole halves, with a ' + MD.half / 2 + '-minute split only where it evens out playing time.' : modeFor(sq) === 'twelve' ? 'Whole halves only. Playing time may differ by a half.' : 'Everyone changes every ' + MD.half / 2 + ' minutes, for the most even time.'}</p></div>
     <button type="button" class="go" data-act="plan">Generate game time</button>
     <div id="mdResult"></div>
 
@@ -2882,10 +2878,10 @@ function renderResult() {
           <thead><tr><th>Player</th><th class="pk">Picked</th>${PERIOD_SHORT.map(p => `<th>${p}</th>`).join('')}<th>Mins</th></tr></thead>
           <tbody>${t.kids.map(k => `<tr><td class="nm" title="${esc(k.name)}"><span class="fulln">${esc(k.name)}</span><span class="shortn">${esc(shorts.get(k.name) || k.name)}</span></td><td class="pk">${esc(choiceLabel(k))}</td>${t.quarters.map((q, qi) => {
             if (!quartersFor(k.avail).includes(qi)) return '<td class="na">·</td>';
-            const sp = (q.split || []).find(s => s.in === k.name || s.out === k.name);
-            if (sp) return `<td class="on" title="Shares this half">½</td>`;
-            return q.on.includes(k.name) ? '<td class="on">✓</td>' : '<td class="sub">Sub</td>';
-          }).join('')}<td class="mins">${t.played.get(k.name) * MD.half}</td></tr>`).join('')}</tbody>
+            const inA = q.a.includes(k.name), inB = q.b.includes(k.name);
+            if (inA !== inB) return `<td class="on" title="${inA ? 'First' : 'Last'} ${MD.half / 2} minutes">½</td>`;
+            return inA && inB ? '<td class="on">✓</td>' : '<td class="sub">Sub</td>';
+          }).join('')}<td class="mins">${Math.round(t.played.get(k.name) * MD.half)}</td></tr>`).join('')}</tbody>
         </table></div></div>`).join('')}
     <p class="small-note">✓ playing, ½ shares the half, · not there. <b>Picked</b> = what the parent chose. <b>Sub</b> = on the bench and ready: knocks and tired legs mean extra minutes, so subs stay with the team.</p>
     <div class="share-row" style="margin-top:12px"><button type="button" class="wa" data-act="lineupwa">${WA_ICON} Send on WhatsApp</button><button type="button" class="copy" data-act="lineupcopy">Copy</button></div>
@@ -2946,7 +2942,7 @@ async function matchAction(act) {
     if (act === 'plan') { await boxLoad(); renderMatch(); }
     const kids = kidsFor(sq);
     if (!kids.some(k => quartersFor(k.avail).length)) { toast('Mark who can play first'); return; }
-    MD_RESULT = { squad: sq, res: allocate(kids, MD.size, MD.seed) };
+    MD_RESULT = { squad: sq, res: allocate(kids, MD.size, MD.seed, null, modeFor(sq)) };
     saveMD(); renderResult();
     $('#mdResult').scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
   }
@@ -2972,6 +2968,11 @@ function bindMatch() {
   if (vIn && eIn) { vIn.addEventListener('input', preview); eIn.addEventListener('input', preview); }
   v.querySelectorAll('[data-venue]').forEach(b => b.onclick = () => {
     const vn = BOX.info.venues[+b.dataset.venue]; vIn.value = vn.venue; eIn.value = vn.eircode || ''; preview();
+  });
+  v.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
+    MD.mode = Object.assign({ Reds: 'best', Greens: 'best' }, MD.mode || {}); MD.mode[MD.squad] = b.dataset.mode; saveMD();
+    if (MD_RESULT && MD_RESULT.squad === MD.squad) regenKeepingTeams(null);
+    renderMatch();
   });
   v.querySelectorAll('[data-md]').forEach(b => b.onclick = () => {
     const k = b.dataset.md, lim = k === 'half' ? [5, 30] : [3, 7];
