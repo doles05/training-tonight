@@ -86,6 +86,9 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .order .n{font-weight:900;color:var(--cone);font-size:20px;text-align:center;font-variant-numeric:tabular-nums}
 .order .what{font-weight:700}
 .order .what small{display:block;font-weight:500;color:var(--ink2);font-size:14px}
+.order li.has-rm{display:grid;grid-template-columns:1fr auto;align-items:center;border-bottom:1px solid var(--line)}
+.order li.has-rm a{border-bottom:0}
+.order .rm{min-height:40px;padding:0 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);font-weight:800;font-size:14px;color:#9B1C1C}
 .panel{margin-top:22px}
 .panel h2{font-size:20px;font-weight:900;margin-bottom:8px}
 .panel p{margin:0 0 8px;color:var(--ink2);font-size:15px}
@@ -1809,7 +1812,9 @@ function scoreDrill(d, nd, o) {
 function buildPlan(st, seed) {
   const rand = rng(seed == null ? (Math.random() * 4294967295) >>> 0 : seed);
   const N = readNumbers(st), notes = N.notes, AR = st.arrival || 0;
-  const stations = Math.max(1, Math.min(N.C, 2 * (st.pitches || 2), Math.floor(N.P / 3)));   // one per coach, one per pitch end
+  const maxStations = 2 * (st.pitches || 2);
+  const stations = st.forceStations ? clamp(st.forceStations, 1, maxStations)       // coach removed or added a station
+    : Math.max(1, Math.min(N.C, maxStations, Math.floor(N.P / 3)));                   // one per coach, one per pitch end
   const tm = timing(st.length - AR, stations + 2, notes, AR > 0);
   const uncovered = new Set(st.focus), used = new Set(), usedPrimary = new Set(), relaxed = new Set();
   const slots = [], blocks = [], phases = [];
@@ -1887,6 +1892,33 @@ function addKitNotes(plan) {
   const kit = kitTotals(plan), have = plan.N.bibs;
   if (kit.bibs && !have) plan.notes.push('No bibs entered: each set-up says how to tell teams apart without them.');
   else if (kit.bibs > have) plan.notes.push(`Tonight needs up to ${kit.bibs} bibs and you have ${have}: the set-ups say how to manage.`);
+}
+
+/* Remove a station (index into PLAN.slots) or add one (null), keeping every other drill */
+function changeStations(removeIdx) {
+  const old = PLAN, stIds = old.slots.filter((s, i) => s.role === 's' && i !== removeIdx).map(s => s.d.id);
+  const count = removeIdx == null ? stIds.length + 1 : stIds.length;
+  const st = JSON.parse(JSON.stringify(old.st)); st.forceStations = count;
+  const np = buildPlan(st, 7);
+  const first = old.slots[0], game = old.slots[old.slots.length - 1];
+  const keep = (sl, d) => { if (d) { sl.d = d; sl.nd = needs(d, sl.n, sl.minAreas || 1, sl.maxAreas || 99); } };
+  keep(np.slots[0], np.slots[0].role === first.role ? first.d : null);
+  keep(np.slots[np.slots.length - 1], game.d);
+  const sts = np.slots.filter(s => s.role === 's');
+  sts.forEach((sl, j) => { if (j < stIds.length) keep(sl, byId[stIds[j]]); });
+  sts.slice(stIds.length).forEach(sl => {         // a new station: make sure it isn't a drill already in the plan
+    const inPlan = new Set(np.slots.filter(x => x !== sl).map(x => x.d.id));
+    if (inPlan.has(sl.d.id)) {
+      const r = pickDrill({ role: 's', n: sl.n, lo: sl.lo, hi: sl.hi, mins: sl.mins, ballsLeft: null, cones: null, bibs: np.N.bibs, exclude: inPlan, rand: Math.random, strict: false, maxAreas: sl.maxAreas });
+      if (r) keep(sl, r.d);
+    }
+  });
+  addKitNotes(np);
+  PLAN = np;
+  const y = window.scrollY;
+  renderPlan();
+  window.scrollTo(0, y);
+  toast(removeIdx == null ? `Station added: ${sts.length} stations, ${np.tm.R} min each` : `Station removed: ${sts.length} ${sts.length === 1 ? 'station' : 'stations'}, ${np.tm.R} min each`);
 }
 
 /* Swap one drill for a different one that suits the same slot */
@@ -1983,7 +2015,8 @@ function renderOverview() {
     else sub = sl.k > 1 ? `Station ${sl.station + 1}, ${sl.mins} min per group` : `Everyone${sl.nd.areas > 1 ? ` in ${sl.nd.areas} areas` : ' together'}`;
     sub += `. ${LAYOUT.at[i]}`;
     const time = sl.role === 's' && sl.k > 1 ? `${sl.start}–${sl.end}′` : `${sl.start}–${sl.start + sl.mins}′`;
-    return `<li><a href="#slot-${i}"><span class="t">${time}</span><span class="n">${i + 1}</span><span class="what">${esc(sl.d.name)}<small>${sub}</small></span></a></li>`;
+    const canRm = sl.role === 's' && P.slots.filter(x => x.role === 's').length > 1;
+    return `<li class="${canRm ? 'has-rm' : ''}"><a href="#slot-${i}"><span class="t">${time}</span><span class="n">${i + 1}</span><span class="what">${esc(sl.d.name)}<small>${sub}</small></span></a>${canRm ? `<button type="button" class="rm" data-rm="${i}" aria-label="Remove ${esc(sl.d.name)}">Remove</button>` : ''}</li>`;
   }).join('');
   const rotas = P.blocks.filter(b => b.k > 1).map(b => {
     const k = b.k, size = Math.floor(N.P / k), big = N.P % k, gs = groupList(k, st, N.P);
@@ -2008,6 +2041,7 @@ function renderOverview() {
     ${P.notes.concat(LAYOUT.notes).length ? `<ul class="notes">${P.notes.concat(LAYOUT.notes).map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
     <div class="strip" aria-hidden="true">${segs.join('')}</div>
     <ol class="order">${order}</ol>
+    ${P.slots.filter(x => x.role === 's').length < 2 * (st.pitches || 2) ? '<button type="button" class="back" data-addst>+ Add a station</button>' : ''}
     ${rotas}
     <div class="panel"><h2>Kit for tonight</h2>
       <div class="kit">
@@ -2020,6 +2054,8 @@ function renderOverview() {
   box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
   box.querySelector('[data-share="wa"]').onclick = () => openWhatsApp(sessionText(PLAN));
   box.querySelector('[data-share="copy"]').onclick = () => copyText(sessionText(PLAN));
+  box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => changeStations(+b.dataset.rm));
+  const ad = box.querySelector('[data-addst]'); if (ad) ad.onclick = () => changeStations(null);
   box.querySelectorAll('.order a').forEach(a => a.onclick = e => {
     e.preventDefault();
     const el = document.querySelector(a.getAttribute('href'));
@@ -2307,6 +2343,7 @@ function bindSetup() {
   });
   root.querySelector('[data-favfirst]').onclick = () => { S.favFirst = !S.favFirst; syncSetup(); };
   $('#goBtn').onclick = () => {
+    delete S.forceStations;
     const a = document.activeElement;
     if (a && a.classList && a.classList.contains('num-in')) setVal(a.dataset.out, a.value);
     PLAN = buildPlan(S);
@@ -2380,6 +2417,7 @@ function openSharedPlan() {
     bibSets: b[8] === 'x' ? [] : b[8].split('_').map(t => ({ c: fromCode[t[0]] || 'Yellow', n: +t.slice(1) })), focus: [], favFirst: false
   });
   const ids = b[9].split('~');
+  S.forceStations = Math.max(1, ids.length - 2);     // arrivals or warm-up + final game, the rest are stations
   PLAN = buildPlan(S, 1);
   if (PLAN.slots.length === ids.length) {
     PLAN.slots.forEach((sl, i) => {
