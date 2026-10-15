@@ -227,6 +227,28 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
 .settings h3{font-size:17px;font-weight:900;margin:20px 0 8px}
 .chip.squad-Reds[aria-pressed="true"]{background:#C8102E;border-color:#C8102E}
 .chip.squad-Greens[aria-pressed="true"]{background:#0F7B3F;border-color:#0F7B3F}
+/* shape of the evening */
+.shape-card{background:var(--card);border-radius:16px;padding:14px 16px;display:grid;gap:12px;margin-bottom:10px}
+.shape-card.off{opacity:.65}
+.shape-head{display:flex;align-items:flex-start;gap:12px;cursor:pointer}
+.shape-head input[type=checkbox]{width:24px;height:24px;margin:2px 0 0;accent-color:var(--ink)}
+.shape-head > span{display:grid;gap:2px;flex:1}
+.shape-head b{font-size:18px;font-weight:900}
+.shape-head small{font-size:15px;color:var(--ink2);line-height:1.4}
+.shape-slider{display:flex;align-items:center;gap:12px}
+.shape-slider input{flex:1;accent-color:var(--ink);height:28px}
+.shape-slider output{min-width:64px;text-align:right;font-size:20px;font-weight:900}
+.shape-line{margin:0;font-size:15px;color:var(--ink2)}
+.shape-warn{margin:0;background:var(--warn);border-radius:10px;padding:8px 12px;font-size:15px}
+.shape .strip{margin:8px 0 6px}
+.shape-total{display:flex;justify-content:space-between;align-items:baseline}
+.shape-total span{font-weight:800;color:var(--ink2)}
+.shape-total b{font-size:30px;font-weight:900}
+/* pitch maps */
+.pmap{background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:10px}
+.pm-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px}
+.pm-head b{font-size:16px}.pm-head span{font-size:14px;font-weight:800;color:var(--ink2);white-space:nowrap}
+.pm-foot{margin:6px 0 0!important;font-size:14px}
 @media (max-width:440px){ .brand-name{display:none} }
 @media (max-width:420px){
   .hero h1{font-size:29px}
@@ -1674,6 +1696,137 @@ const WALK = {
 };
 DRILLS.forEach(d => { d.walk = WALK[d.id] || []; });
 
+/* ---------------- MORE ARRIVAL OPENERS ----------------
+   Built for the trickle-in: start with one or two boys, late arrivals walk straight in. */
+D({ id: 'cagewall', name: 'Cage Wall Rebounds', role: 'a s', focus: ['passing', 'firsttouch', 'bothfeet'], int: 1, dur: [4, 12], min: 1, max: 20, cones: [0, 1],
+  setup: ['Use the cage wall around the pitch. Put a cone about 5 big steps out from the wall for each boy.', 'Each boy who arrives takes a ball and a cone.'],
+  how: 'Pass the ball against the cage wall, control it as it comes back, and pass again. Count how many in a row without losing it.',
+  pts: ['Inside of the foot, firm pass', 'Stop it dead before passing again', 'Right foot then left foot'],
+  easy: 'Stand closer to the wall.', hard: 'One touch: pass straight back without stopping it.',
+  walk: ['Each boy who arrives takes a ball and stands at a cone facing the cage wall.', 'Pass the ball at the wall.', 'Stop it with your foot as it comes back.', 'Pass again. Count how many in a row, then try with the other foot.'],
+  anim: () => {
+    const a = A(7).zone(8, 6, 84, 4, 'rgba(255,255,255,.55)', 'CAGE WALL');
+    [20, 40, 60, 80].forEach((x, i) => {
+      a.cone(x, 36, 'y').p(i % 2 ? 'b' : 'r', `0:${x},32 .3:${x - 1.5},32 .6:${x + 1.5},32`, '', 'w' + i).face(0, -1, true);
+      a.b(`0@w${i} .08:${x + (i % 2 ? 2 : -2)},11 .16@w${i} .3@w${i} .38:${x},11 .46@w${i} .6@w${i} .68:${x + (i % 2 ? -2 : 2)},11 .76@w${i}`, i * .11);
+    });
+    return a.text(50, 60, 'Pass, stop it, again: how many in a row?', 3.4);
+  }
+});
+
+D({ id: 'growrondo', name: 'Growing Rondo', role: 'a s', focus: ['possession', 'passing', 'firsttouch'], int: 2, dur: [5, 15], min: 3, max: 8, ball: 1, cones: [4, 0], bibs: 'few',
+  setup: ['Mark a square about 8 × 8 big steps with 4 cones. Have a second square ready next to it.', 'One ball. The first boy to arrive is the defender in the middle.'],
+  how: 'Start 2 v 1 as soon as three are there: two pass, one tries to win it. Each new arrival joins the outside. At 5 on the outside, add a second defender; at 7, split into two squares.',
+  pts: ['Move to make an angle for a pass', 'Pass to the player furthest from the defender', 'Defender: block the pass, don\'t dive in'],
+  easy: 'Two touches allowed for everyone.', hard: 'One touch only on the outside.',
+  walk: ['As soon as three boys are there, two stand at the edge of the square and one goes in the middle.', 'The two outside pass to each other; the one in the middle tries to touch the ball.', 'Each new boy who arrives joins the outside, so it gets easier to keep the ball.', 'Swap the middle player every minute. At 7 boys, split into two squares.'],
+  anim: () => A(9).corners(30, 12, 40, 40, 'y')
+    .p('r', '0:34,16 .45:34,18 .55:30,22 .9:32,18', '', 'r1').face(1, 1, true)
+    .p('r', '0:66,48 .45:66,46 .55:70,42 .9:68,46', '', 'r2').face(-1, -1, true)
+    .p('r', '0:50,62 .4:50,62 .5:66,16 .9:66,16', '', 'r3').face(-1, 1, true)
+    .p('y', '0:50,32 .1:58,40 .25:42,24 .4:56,38 .55:52,28 .7:58,30 .85:44,34', 'D')
+    .b('0@r1 .05@r1 .15@r2 .25@r2 .35@r1 .45@r1 .6@r3 .65@r3 .75@r2 .85@r2 .95@r1')
+    .text(50, 7.5, [[0, '2 v 1: keep it from the middle'], [.42, 'New arrival joins the outside', '#FFC300'], [.6, 'Now 3 v 1']], 3.4)
+});
+
+D({ id: 'ballcones', name: 'Knock It Off the Cone', role: 'a s', focus: ['shooting', 'passing', 'bothfeet'], int: 1, dur: [4, 12], min: 1, max: 14, cones: [6, 0],
+  setup: ['Put 5 tall cones in a row with a ball balanced on top of each.', 'A shooting line of cones about 8 big steps back. Spare balls at the line.'],
+  how: 'Shoot or pass to knock a ball off a cone. Knock one off, put it back, go again. Keep your own score.',
+  pts: ['Plant your foot beside the ball', 'Look at the target, then the ball', 'Side-foot for accuracy, laces for power'],
+  easy: 'Move the shooting line closer.', hard: 'Weaker foot only; or hit them in order, left to right.',
+  walk: ['Balance a ball on top of each tall cone in a row.', 'Arrivals take a ball to the shooting line.', 'Kick to knock a ball off a cone. If you do, put it back on.', 'Go again. Everyone keeps their own score.'],
+  anim: () => {
+    const a = A(7).line(15, 46, 85, 46);
+    [25, 37.5, 50, 62.5, 75].forEach(x => a.cone(x, 16, 'o'));
+    a.b('0:37.5,15 .22:37.5,15 .3:40,4 .9:40,4 1:37.5,15').b('0:62.5,15 .62:62.5,15 .7:66,4 .9:66,4 1:62.5,15');
+    [25, 50, 75].forEach(x => a.b(`0:${x},15 1:${x},15`));
+    a.p('r', '0:30,52 .12:32,49 .3:30,52', '', 's1').b('0@s1 .12@s1 .22:37.5,16.5 .3:36,22 .45@s1 1@s1');
+    a.p('b', '0:60,52 .52:58,49 .7:60,52', '', 's2').b('0@s2 .52@s2 .62:62.5,16.5 .7:60,22 .85@s2 1@s2');
+    a.p('k', '0:88,30 .8:66,18 .9:42,18 1:88,30', 'C');
+    return a.text(50, 61, [[0, 'Shoot from the line'], [.22, 'Knocked off! +1', '#FFC300'], [.4, 'Shoot from the line'], [.62, 'Knocked off! +1', '#FFC300'], [.8, 'Put it back on']], 3.4);
+  }
+});
+
+D({ id: 'followleader', name: 'Follow the Leader', role: 'a w', focus: ['dribbling', 'ballmastery', 'agility'], int: 2, dur: [4, 10], min: 2, max: 12,
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Everyone has a ball.'],
+  how: 'One boy leads, dribbling anywhere in the box; the rest follow in a line copying exactly what he does. New arrivals join the back. Every 30 seconds the leader goes to the back.',
+  pts: ['Keep the ball close so you don\'t bump the boy in front', 'Copy the leader\'s turns and tricks', 'Leaders: change speed and direction'],
+  easy: 'Leader walks.', hard: 'Leader does a trick every 5 seconds that everyone must copy.',
+  walk: ['The first boy to arrive is the leader and dribbles anywhere in the box.', 'The next boys follow behind him in a line, copying what he does.', 'Each new arrival joins the back of the line.', 'Every 30 seconds, shout "Change!": the leader goes to the back and the next boy leads.'],
+  anim: () => {
+    const a = A(10).area(15, 8, 70, 48).corners(15, 8, 70, 48);
+    const path = t => { const g = 2 * Math.PI * t; return [50 + 26 * Math.sin(g), 32 + 16 * Math.sin(2 * g)]; };
+    for (let i = 0; i < 5; i++) a.p(i === 0 ? 'y' : 'r', t => path(wrap(t - i * .035)), i === 0 ? 'L' : '', 'f' + i).b(`0@f${i} 1@f${i}`);
+    const lerp2 = (a2, b2, u) => [a2[0] + (b2[0] - a2[0]) * u, a2[1] + (b2[1] - a2[1]) * u], home = [50, 62];
+    a.p('r', t => t < .45 ? home : t < .55 ? lerp2(home, path(wrap(.55 - .21)), (t - .45) / .1) : t < .9 ? path(wrap(t - .21)) : lerp2(path(wrap(.9 - .21)), home, (t - .9) / .1), '', 'late').b('0@late 1@late');
+    return a.text(50, 5.5, [[0, 'Follow the leader (yellow)'], [.45, 'New arrival joins the back', '#FFC300'], [.6, 'Follow the leader (yellow)']], 3.4);
+  }
+});
+
+D({ id: 'pairsgates', name: 'Pairs Gate Race', role: 'a s', focus: ['passing', 'firsttouch', 'teamwork'], int: 2, dur: [4, 10], min: 2, max: 16, ball: 'half', cones: [0, 1],
+  setup: ['Set out little gates (2 cones, 2 steps apart) in a line across the pitch.', 'Pairs stand either side of a gate, 4 big steps back. One ball per pair.'],
+  how: 'Pairs pass through their gate as many times as they can in 30 seconds, counting out loud. New arrivals pair up and take the next gate. Beat your score.',
+  pts: ['Stop it, then pass', 'Inside of the foot through the middle of the gate', 'Count out loud together'],
+  easy: 'Bigger gates.', hard: 'One touch; or weaker foot only.',
+  walk: ['The first two boys stand either side of a gate with one ball.', 'Shout "Go!" and they pass through the gate to each other for 30 seconds, counting out loud.', 'New arrivals pair up and use the next gate.', 'Shout "Stop!", ask for scores, and go again to beat them.'],
+  anim: () => {
+    const a = A(8);
+    [14, 32, 50].forEach((y, i) => {
+      a.gate(50, y, true, 5).p(i === 2 ? 'b' : 'r', `0:34,${y} 1:34,${y}`, '', 'L' + i).face(1, 0, true).p(i === 2 ? 'b' : 'r', `0:66,${y} 1:66,${y}`, '', 'R' + i).face(-1, 0, true);
+      const k = ['0@L' + i]; for (let s = 0; s < 4; s++) { const t = s * .25; k.push(`${(t + .03).toFixed(2)}@L${i}`, `${(t + .11).toFixed(2)}@R${i}`, `${(t + .15).toFixed(2)}@R${i}`, `${(t + .23).toFixed(2)}@L${i}`); }
+      a.b(k.join(' '), i * .07);
+    });
+    return a.text(50, 61, [[0, 'Count: 1'], [.25, 'Count: 2'], [.5, 'Count: 3'], [.75, 'Count: 4']], 3.6);
+  }
+});
+
+D({ id: 'oneboxes', name: '1v1 Boxes', role: 'a s', focus: ['1v1', 'dribbling', 'defending'], int: 3, dur: [5, 12], min: 2, max: 12, ball: 'half', cones: [0, 4],
+  setup: ['Mark small boxes about 10 × 8 big steps side by side (4 cones each), with a 2-cone gate at each end.', 'One ball per box.'],
+  how: 'The first two arrivals play 1v1 in box 1: score by dribbling through the other boy\'s gate. The next two open box 2, and so on. Change opponents every 2 minutes.',
+  pts: ['Attack the gate with speed', 'Fake one way, go the other', 'Lose it? Win it straight back'],
+  easy: 'Bigger gates.', hard: 'Must stop the ball in the gate to score.',
+  walk: ['As soon as two boys are there, they play 1v1 in the first box.', 'Score by dribbling through the gate at the other end.', 'When the next two arrive, they start in the second box.', 'Every 2 minutes, change opponents so everyone plays different boys.'],
+  anim: () => A(8).corners(8, 8, 40, 22, 'w').corners(52, 8, 40, 22, 'w').corners(8, 36, 40, 22, 'w')
+    .duel({ box: [8, 8, 40, 22], finish: 'goal', pre: 'x' }).gate(8, 19).gate(48, 19)
+    .duel({ box: [52, 8, 40, 22], finish: 'goal', pre: 'y', fake: -1, ph: .3 }).gate(52, 19).gate(92, 19)
+    .gate(8, 47).gate(48, 47)
+    .p('g', '0:20,62 .5:20,62 .6:16,47 1:16,47').p('p', '0:40,62 .6:40,62 .7:40,47 1:40,47')
+    .text(50, 33.4, [[0, 'Box 1 and box 2 playing'], [.55, 'Two more arrive: box 3 opens', '#FFC300']], 3.2)
+});
+
+D({ id: 'snowball', name: 'Snowball Tag', role: 'a w', focus: ['dribbling', 'speed', 'agility'], int: 3, dur: [4, 9], min: 4, max: 20, bibs: 'few',
+  setup: ['Mark a box about 20 × 20 big steps with 4 cones.', 'Everyone has a ball. One tagger with a bib (or a cone in his hand).'],
+  how: 'The tagger dribbles and tags others on the shoulder. Anyone tagged becomes a tagger too, so the taggers snowball. New arrivals join as dribblers. Last one left starts the next game as tagger.',
+  pts: ['Ball close, eyes up', 'Use the whole box to escape', 'Taggers: work together to corner people'],
+  easy: 'Taggers have no ball.', hard: 'Weaker foot only for everyone.',
+  walk: ['Everyone dribbles in the box. One boy is the tagger.', 'The tagger dribbles too, and touches someone on the shoulder.', 'Whoever is tagged becomes a tagger as well.', 'Keep going until one boy is left. He starts as tagger next game. Late arrivals just join in.'],
+  anim: () => A(9).area(20, 6, 60, 52).corners(20, 6, 60, 52)
+    .crowd({ n: 3, box: [20, 6, 60, 52], c: 'r', seed: 91, steps: 6 })
+    .p('y', '0:30,14 .3:46,28 .35:48,30 .6:62,44 .75:66,40 1:30,14', 'T', 't')
+    .p('r', '0:58,20 .3:51,29 .35:51,31 .45:51,31 .6:38,44 .75:63,42 .8:64,41 1:58,20', '', 'v').col([[0, 'r', ''], [.35, 'y', 'T']])
+    .p('r', '0:70,48 .5:66,46 .75:65,43 .8:66,42 1:70,48', '', 'w').col([[0, 'r', ''], [.78, 'y', 'T']])
+    .b('0@t 1@t').b('0@v 1@v').b('0@w 1@w')
+    .text(50, 4.4, [[0, 'One tagger (yellow)'], [.35, 'Tagged: now two taggers', '#FFC300'], [.78, 'Tagged: now three!', '#FFC300']], 3.4)
+});
+
+D({ id: 'skillcorners', name: 'Skill Corners', role: 'a w', focus: ['ballmastery', 'dribbling', 'bothfeet'], int: 1, dur: [4, 12], min: 1, max: 20,
+  setup: ['Mark a box about 20 × 20 big steps. Put a coloured cone at each corner.', 'Tell everyone the move for each corner, e.g. red = toe taps, blue = sole rolls, yellow = step-overs, green = drag-backs.'],
+  how: 'Dribble to any corner, do that corner\'s move 10 times, then dribble to a different corner. Arrivals just grab a ball and start.',
+  pts: ['Small touches between corners', 'Count your 10 out loud', 'Both feet for every move'],
+  easy: 'Only two moves.', hard: 'Must visit the corners in order, as fast as possible.',
+  walk: ['Put a different coloured cone at each corner and tell everyone each corner\'s move.', 'Each boy who arrives takes a ball and dribbles to any corner.', 'At the corner, do that move 10 times.', 'Then dribble to a different corner and do that move. Keep going until everyone is here.'],
+  anim: () => {
+    const a = A(10).area(18, 8, 64, 48).cone(18, 8, 'r').cone(82, 8, 'b').cone(18, 56, 'y').cone(82, 56, 'g')
+      .text(26, 15, 'Toe taps', 3).text(74, 15, 'Sole rolls', 3).text(28, 52, 'Step-overs', 3).text(72, 52, 'Drag-backs', 3);
+    const C = [[26, 19], [74, 19], [26, 47], [74, 47]];
+    [[0, 3, 1], [1, 2, 0], [3, 0, 2]].forEach((route, i) => {
+      const k = []; route.forEach((c, j) => { const t = j / 3; k.push(K(t + .02, ...C[c]), K(t + .2, C[c][0] + (j % 2 ? 1.5 : -1.5), C[c][1])); });
+      a.p(['r', 'b', 'y'][i], k.join(' '), '', 'q' + i).ph(i * .1).b(`0@q${i} 1@q${i}`);
+    });
+    return a.text(50, 33, 'Dribble to a corner, do its move', 3.4);
+  }
+});
+
 /* =========================================================
    3. FAVOURITES (saved on this phone with localStorage)
    ========================================================= */
@@ -1692,7 +1845,9 @@ const S = {
   balls: null,                 // null = not set (assume one each)
   bibSets: [],                 // [{ c: 'Yellow', n: 10 }, ...] up to 4 sets
   pitches: 2,                  // large caged pitches (8v8 size)
-  length: 60, arrival: 10, squads: false, focus: [], favFirst: true
+  length: 60, arrival: 10, squads: false, focus: [], favFirst: true,
+  /* shape of the evening, chosen by the coach */
+  openerOn: true, openerMin: 10, stations: 4, stationMin: 9, gameOn: true, gameMin: 14
 };
 let PLAN = null, LAYOUT = { at: {}, notes: [] };
 const BIB_COLOURS = [['Yellow', '#FFD23F'], ['Orange', '#FF7A1A'], ['Blue', '#1E6FD9'], ['Green', '#12A150'],
@@ -1787,8 +1942,18 @@ function pickDrill(o) {
   }
   return null;
 }
+/* drills from the last 3 plans made on this phone, so sessions rotate through the whole catalogue */
+const RECENT_KEY = 'trainingTonight.recent.v1';
+let RECENT_LIST = [];
+try { RECENT_LIST = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch (e) { RECENT_LIST = []; }
+let RECENT = new Set(RECENT_LIST.flat());
+function rememberPlan(plan) {
+  RECENT_LIST = [plan.slots.map(s => s.d.id)].concat(RECENT_LIST).slice(0, 3);
+  RECENT = new Set(RECENT_LIST.flat());
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(RECENT_LIST)); } catch (e) { /* storage blocked */ }
+}
 function scoreDrill(d, nd, o) {
-  let s = o.rand() * 1.2;
+  let s = o.rand() * 3;                                 // plenty of variety
   const focus = S.focus;
   const hits = focus.length ? d.focus.filter(f => focus.includes(f)).length : 0;
   if (hits) s += 2 + hits * .6;
@@ -1798,9 +1963,9 @@ function scoreDrill(d, nd, o) {
   if (o.mins > d.dur[1]) s -= (o.mins - d.dur[1]) * .35;
   const robust = [o.lo, o.hi].every(m => m >= d.min && m / Math.max(1, Math.ceil(m / d.max)) >= d.min);
   if (robust) s += .6;
-  if (nd.cones > 16) s -= .7;
+  if (RECENT.has(d.id)) s -= 2.5;                       // used in one of the last 3 plans: give others a go
   if (o.usedPrimary && o.usedPrimary.has(d.focus[0])) s -= .8;
-  if (d.role[0] !== o.role) s -= o.role === 'g' ? 1 : .3;
+  if (o.role === 'g' && d.role[0] !== 'g') s -= 1;      // final game: prefer proper small-sided games
   if (o.role === 'w' && d.int === 3) s -= .2;
   if (o.like) {
     s += d.focus.filter(f => o.like.focus.includes(f)).length * 1.2;
@@ -1811,11 +1976,22 @@ function scoreDrill(d, nd, o) {
 
 function buildPlan(st, seed) {
   const rand = rng(seed == null ? (Math.random() * 4294967295) >>> 0 : seed);
-  const N = readNumbers(st), notes = N.notes, AR = st.arrival || 0;
-  const maxStations = 2 * (st.pitches || 2);
-  const stations = st.forceStations ? clamp(st.forceStations, 1, maxStations)       // coach removed or added a station
-    : Math.max(1, Math.min(N.C, maxStations, Math.floor(N.P / 3)));                   // one per coach, one per pitch end
-  const tm = timing(st.length - AR, stations + 2, notes, AR > 0);
+  const N = readNumbers(st), notes = N.notes;
+  const shaped = st.stations != null;          // the coach chose the shape of the evening
+  let AR, tm;
+  if (shaped) {
+    AR = st.openerOn ? st.openerMin : 0;
+    tm = { W: 0, M: Math.max(1, st.stations), R: st.stationMin, G: st.gameOn ? st.gameMin : 0 };
+    const cMax = st.coaches.unknown ? 2 : st.coaches.max;
+    if (st.stations > cMax) notes.push(`${st.stations} stations but ${cMax} coaches: ${st.stations - cMax === 1 ? 'one station needs' : (st.stations - cMax) + ' stations need'} a parent helper.`);
+    st = Object.assign({}, st, { arrival: AR, length: AR + tm.M * tm.R + tm.G });
+  } else {
+    AR = st.arrival || 0;
+    const maxStations = 2 * (st.pitches || 2);
+    const stations = st.forceStations ? clamp(st.forceStations, 1, maxStations)
+      : Math.max(1, Math.min(N.C, maxStations, Math.floor(N.P / 3)));                 // one per coach, one per pitch end
+    tm = timing(st.length - AR, stations + 2, notes, AR > 0);
+  }
   const uncovered = new Set(st.focus), used = new Set(), usedPrimary = new Set(), relaxed = new Set();
   const slots = [], blocks = [], phases = [];
   const take = (role, n, lo, hi, mins, ballsLeft, minAreas, maxAreas) => {
@@ -1835,13 +2011,13 @@ function buildPlan(st, seed) {
     slots.push({ role: 'a', d: a.d, nd: a.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: AR, start: 0, end: AR, block: -1, minAreas: minA, maxAreas: Math.max(minA, wholeMax) });
     t = AR;
   }
-  if (!AR) {                                  // no arrivals opener: a normal warm-up instead
+  if (!AR && !shaped) {                       // older plans without an opener: a normal warm-up instead
     const w = take('w', N.P, N.Plo, N.Phi, tm.W, N.balls, 1, wholeMax);
     phases.push([slots.length]);
     slots.push({ role: 'w', d: w.d, nd: w.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.W, start: t, end: t + tm.W, block: -1, maxAreas: wholeMax });
     t += tm.W;
   }
-  const cap = Math.max(1, Math.min(N.C, Math.floor(N.P / 3)));
+  const cap = shaped ? Math.max(1, Math.min(tm.M, Math.floor(N.P / 3))) : Math.max(1, Math.min(N.C, Math.floor(N.P / 3)));
   splitBlocks(tm.M, cap).forEach((k, bi) => {
     const n = Math.ceil(N.P / k), lo = Math.floor(N.Plo / k), hi = Math.ceil(N.Phi / k);
     const perPitch = Math.ceil(k / NP), stMax = perPitch >= 3 ? 1 : perPitch === 2 ? 2 : 4;
@@ -1861,9 +2037,11 @@ function buildPlan(st, seed) {
     blocks.push(blk); phases.push(blk.slots.slice());
     t = blk.end;
   });
-  const g = take('g', N.P, N.Plo, N.Phi, tm.G, N.balls, 1, wholeMax);
-  phases.push([slots.length]);
-  slots.push({ role: 'g', d: g.d, nd: g.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.G, start: t, end: t + tm.G, block: -1, maxAreas: wholeMax });
+  if (tm.G > 0) {
+    const g = take('g', N.P, N.Plo, N.Phi, tm.G, N.balls, 1, wholeMax);
+    phases.push([slots.length]);
+    slots.push({ role: 'g', d: g.d, nd: g.nd, n: N.P, lo: N.Plo, hi: N.Phi, mins: tm.G, start: t, end: t + tm.G, block: -1, maxAreas: wholeMax });
+  }
 
   if (relaxed.has('balls')) notes.push(`Some drills need more balls than you have (${N.balls}), so players share where needed.`);
   if (relaxed.has('size')) notes.push('With these numbers some drills run with smaller groups than ideal; a coach can join in to make up numbers.');
@@ -1894,16 +2072,67 @@ function addKitNotes(plan) {
   else if (kit.bibs > have) plan.notes.push(`Tonight needs up to ${kit.bibs} bibs and you have ${have}: the set-ups say how to manage.`);
 }
 
+/* A small picture of the pitches, side by side, for one part of the night */
+function pitchMapCard(P, ph) {
+  const np = P.st.pitches || 2, sl = P.slots[ph[0]], gap = 8, W = 352, H = 132, top = 16;
+  const pw = (W - gap * (np - 1)) / np;
+  const short = n => { const w = n.split(' '); if (w.length < 2) return [n, '']; const h = Math.ceil(w.length / 2); return [w.slice(0, h).join(' '), w.slice(h).join(' ')]; };
+  let items = Array.from({ length: np }, () => []), rows = false, title, time;
+  if (ph.length > 1) {
+    const k = ph.length;
+    ph.forEach((idx, s) => items[Math.min(np - 1, Math.floor(s * np / k))].push({ num: s + 1, name: P.slots[idx].d.name }));
+    title = `${k} stations, ${sl.mins} min each`; time = `${sl.start}–${sl.end}′`;
+  } else {
+    const a = sl.nd.areas, per = Math.ceil(a / np);
+    let left = a, n = 1;
+    for (let p = 0; p < np && left > 0; p++) { const c = Math.min(per, left); for (let j = 0; j < c; j++) items[p].push({ name: sl.role === 'g' ? `Game ${n + j}` : `Area ${n + j}` }); n += c; left -= c; }
+    if (sl.role === 'a' && P.st.squads) { items = Array.from({ length: np }, (_, p) => p === 0 ? [{ name: 'Reds' }] : p === 1 ? [{ name: 'Greens' }] : []); }
+    rows = sl.role === 'g';
+    title = `${sl.role === 'a' ? 'Opener' : sl.role === 'w' ? 'Warm-up' : 'Final game'}: ${sl.d.name}`; time = `${sl.start}–${sl.start + sl.mins}′`;
+  }
+  let svg = '';
+  for (let p = 0; p < np; p++) {
+    const x0 = p * (pw + gap);
+    svg += `<text x="${x0 + pw / 2}" y="11" text-anchor="middle" font-size="11" font-weight="800" fill="#4A5870">PITCH ${p + 1}</text>`;
+    svg += `<rect x="${x0}" y="${top}" width="${pw}" height="${H}" rx="6" fill="#2E8B4F" stroke="#14213D" stroke-width="2"/>`;
+    svg += `<line x1="${x0 + pw / 2}" y1="${top + 4}" x2="${x0 + pw / 2}" y2="${top + H - 4}" stroke="#fff" stroke-opacity=".45" stroke-width="1.5"/>`;
+    const list = items[p], m = list.length;
+    list.forEach((it, j) => {
+      const pad = 7;
+      const bx = rows ? x0 + pad : x0 + pad + j * (pw - pad) / m, bw = rows ? pw - 2 * pad : (pw - pad) / m - pad;
+      const by = rows ? top + pad + j * (H - pad) / m : top + pad, bh = rows ? (H - pad) / m - pad : H - 2 * pad;
+      svg += `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="4" fill="#fff" fill-opacity=".22" stroke="#fff" stroke-dasharray="4 3"/>`;
+      const cx = bx + bw / 2, cy = by + bh / 2;
+      if (it.num) {
+        const [l1, l2] = short(it.name);
+        svg += `<circle cx="${cx}" cy="${cy - 22}" r="12" fill="#FF7A1A"/><text x="${cx}" y="${cy - 17}" text-anchor="middle" font-size="13" font-weight="900" fill="#14213D">${it.num}</text>`;
+        svg += `<text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="10.5" font-weight="900" fill="#fff">${esc(l1)}</text><text x="${cx}" y="${cy + 21}" text-anchor="middle" font-size="10.5" font-weight="900" fill="#fff">${esc(l2)}</text>`;
+      } else {
+        svg += `<text x="${cx}" y="${cy + 4}" text-anchor="middle" font-size="11.5" font-weight="900" fill="#fff">${esc(it.name)}</text>`;
+      }
+      if (rows) svg += `<rect x="${bx}" y="${cy - 7}" width="4" height="14" fill="#fff"/><rect x="${bx + bw - 4}" y="${cy - 7}" width="4" height="14" fill="#fff"/>`;
+    });
+  }
+  const foot = ph.length > 1 ? `<p class="pm-foot">Groups move ${ph.map((_, s) => s + 1).join(' → ')} every ${sl.mins} minutes.</p>` : sl.role === 'g' ? '<p class="pm-foot">Games across the width of the pitch.</p>' : '';
+  return `<div class="pmap"><div class="pm-head"><b>${esc(title)}</b><span>${time}</span></div>
+    <svg viewBox="-2 0 ${W + 4} ${top + H + 3}" width="100%" role="img" aria-label="${esc(title)}: where it goes on the pitches">${svg}</svg>${foot}</div>`;
+}
+
 /* Remove a station (index into PLAN.slots) or add one (null), keeping every other drill */
 function changeStations(removeIdx) {
   const old = PLAN, stIds = old.slots.filter((s, i) => s.role === 's' && i !== removeIdx).map(s => s.d.id);
   const count = removeIdx == null ? stIds.length + 1 : stIds.length;
   const st = JSON.parse(JSON.stringify(old.st)); st.forceStations = count;
+  if (st.stations != null) {                       // keep the evening the same length: share the station time out again
+    const block = st.stations * st.stationMin, R = clamp(Math.floor(block / count), 5, 15), spare = block - R * count;
+    st.stations = count; st.stationMin = R;
+    if (st.gameOn) st.gameMin += spare; else if (st.openerOn) st.openerMin += spare;
+  }
   const np = buildPlan(st, 7);
-  const first = old.slots[0], game = old.slots[old.slots.length - 1];
+  const first = old.slots[0], game = old.slots.find(s => s.role === 'g');
   const keep = (sl, d) => { if (d) { sl.d = d; sl.nd = needs(d, sl.n, sl.minAreas || 1, sl.maxAreas || 99); } };
-  keep(np.slots[0], np.slots[0].role === first.role ? first.d : null);
-  keep(np.slots[np.slots.length - 1], game.d);
+  if (np.slots[0].role !== 's') keep(np.slots[0], np.slots[0].role === first.role ? first.d : null);
+  const ng = np.slots.find(s => s.role === 'g'); if (ng && game) keep(ng, game.d);
   const sts = np.slots.filter(s => s.role === 's');
   sts.forEach((sl, j) => { if (j < stIds.length) keep(sl, byId[stIds[j]]); });
   sts.slice(stIds.length).forEach(sl => {         // a new station: make sure it isn't a drill already in the plan
@@ -2004,12 +2233,12 @@ function renderOverview() {
   const sumLine = `${st.length} minutes for ${rng2(st.players, 'about 14')} players and ${rng2(st.coaches, '2')} coaches.`;
   const segs = P.phases.map(ph => {
     const sl = P.slots[ph[0]], mins = ph.length > 1 ? sl.k * sl.mins : sl.mins;
-    const label = sl.role === 'a' ? 'Arrive' : sl.role === 'w' ? `${mins}′` : sl.role === 'g' ? `Game ${mins}′` : (ph.length > 1 ? `${ph.length} stations` : esc(sl.d.name));
+    const label = sl.role === 'a' ? 'Opener' : sl.role === 'w' ? `${mins}′` : sl.role === 'g' ? `Game ${mins}′` : (ph.length > 1 ? `${ph.length} stations` : esc(sl.d.name));
     return `<span class="${sl.role}" style="flex:${mins}">${label}</span>`;
   });
   const order = P.slots.map((sl, i) => {
     let sub;
-    if (sl.role === 'a') sub = st.squads ? 'Arrivals and warm-up: Reds and Greens to their own pitch' : 'Arrivals and warm-up: start with whoever is here';
+    if (sl.role === 'a') sub = st.squads ? 'Opener: Reds and Greens to their own pitch' : 'Opener: start with whoever is here';
     else if (sl.role === 'w') sub = `Warm-up, everyone${sl.nd.areas > 1 ? ` in ${sl.nd.areas} areas` : ' together'}`;
     else if (sl.role === 'g') sub = `Final game, ${sl.nd.areas === 1 ? 'one game' : sl.nd.areas + ' games at once'}`;
     else sub = sl.k > 1 ? `Station ${sl.station + 1}, ${sl.mins} min per group` : `Everyone${sl.nd.areas > 1 ? ` in ${sl.nd.areas} areas` : ' together'}`;
@@ -2043,6 +2272,7 @@ function renderOverview() {
     <ol class="order">${order}</ol>
     ${P.slots.filter(x => x.role === 's').length < 2 * (st.pitches || 2) ? '<button type="button" class="back" data-addst>+ Add a station</button>' : ''}
     ${rotas}
+    <div class="panel"><h2>Where everything goes</h2>${P.phases.map(ph => pitchMapCard(P, ph)).join('')}</div>
     <div class="panel"><h2>Kit for tonight</h2>
       <div class="kit">
         <div><b>${kit.balls}</b><span>Balls</span><small>Most used at once</small></div>
@@ -2094,7 +2324,7 @@ function cardEl(d, sl, i) {
   el.id = sl ? 'slot-' + i : 'fav-' + d.id;
   let meta;
   if (!sl) meta = `Works for ${d.min}–${d.max} players per area, ${d.dur[0]}–${d.dur[1]} minutes.`;
-  else if (sl.role === 'a') meta = `<b>Arrivals and warm-up</b>, first ${sl.mins} minutes.${PLAN.st.squads ? ' Reds and Greens each go to their own pitch.' : ' Starts with whoever is here.'}`;
+  else if (sl.role === 'a') meta = `<b>Opener</b>, first ${sl.mins} minutes.${PLAN.st.squads ? ' Reds and Greens each go to their own pitch.' : ' Starts with whoever is here.'}`;
   else if (sl.role === 'w') meta = `<b>Warm-up</b>, ${sl.mins} minutes. Everyone${nd.areas > 1 ? ` in ${nd.areas} areas side by side` : ' together'}.`;
   else if (sl.role === 'g') meta = `<b>Final game</b>, ${sl.mins} minutes. ${nd.areas > 1 ? `${nd.areas} games at once` : 'One game'}, about ${Math.round(nd.per)} players in each.`;
   else if (sl.k > 1) meta = `<b>Station ${sl.station + 1}</b>, ${sl.mins} minutes per group. One coach stays here.`;
@@ -2192,7 +2422,7 @@ function show(view) {
    7. SETUP SCREEN
    ========================================================= */
 const LIMITS = { 'players.min': [1, 60, 1], 'players.max': [1, 60, 1], 'coaches.min': [1, 10, 1], 'coaches.max': [1, 10, 1],
-  balls: [0, 80, 1], drills: [3, 8, 1], pitches: [1, 4, 1], bib: [1, 40, 1] };
+  balls: [0, 80, 1], drills: [3, 8, 1], pitches: [1, 4, 1], stations: [1, 6, 1], bib: [1, 40, 1] };
 function stepperHTML(path, label) {
   return `<div class="stepper" role="group" aria-label="${label}">
     <button type="button" data-step="${path}" data-d="-1" aria-label="${label}: fewer">−</button>
@@ -2218,11 +2448,25 @@ function renderSetup() {
       <div id="bibSets"></div></div>
     <div class="field"><div class="field-head"><h2>Pitches</h2></div>
       ${stepperHTML('pitches', 'Pitches')}</div>
-    <div class="field"><div class="field-head"><h2>Session length</h2><span class="hint">Minutes, including arrivals</span></div>
-      <div class="chips big">${[45, 60, 75, 90].map(m => `<button type="button" class="chip" data-len="${m}">${m}</button>`).join('')}</div></div>
-    <div class="field"><div class="field-head"><h2>Arrivals</h2><span class="hint">An easy opener as players trickle in. It's also the warm-up.</span></div>
-      <div class="chips">${[[0, 'No, a normal warm-up'], [5, '5 min'], [10, '10 min'], [15, '15 min']].map(([m, l]) => `<button type="button" class="chip" data-arr="${m}">${l}</button>`).join('')}</div>
-      <div class="chips" id="squadRow" style="margin-top:10px"><button type="button" class="chip" data-squads>Reds and Greens to their own pitch</button></div></div>
+    <div class="field shape"><div class="field-head"><h2>Shape of the evening</h2></div>
+      <div class="shape-card" id="shOpenerCard">
+        <label class="shape-head"><input type="checkbox" id="shOpener"><span><b>Opener</b><small>An easy game the boys join as they arrive. It's also the warm-up.</small></span></label>
+        <div class="shape-slider" id="shOpenerRow"><input type="range" id="shOpenerMin" min="5" max="20" step="1" aria-label="Opener minutes"><output id="shOpenerOut"></output></div>
+        <div class="chips" id="squadRow"><button type="button" class="chip small" data-squads>Reds and Greens to their own pitch</button></div>
+      </div>
+      <div class="shape-card">
+        <div class="shape-head"><span><b>Stations</b><small>Groups rotate; cones stay put</small></span>${stepperHTML('stations', 'Stations')}</div>
+        <div class="shape-slider"><input type="range" id="shStMin" min="5" max="15" step="1" aria-label="Minutes at each station"><output id="shStOut"></output></div>
+        <p class="shape-line" id="shStLine"></p>
+        <p class="shape-warn" id="shWarn" hidden></p>
+      </div>
+      <div class="shape-card" id="shGameCard">
+        <label class="shape-head"><input type="checkbox" id="shGame"><span><b>Final game</b><small>Small-sided games to finish, two per pitch.</small></span></label>
+        <div class="shape-slider" id="shGameRow"><input type="range" id="shGameMin" min="8" max="30" step="1" aria-label="Final game minutes"><output id="shGameOut"></output></div>
+      </div>
+      <div class="strip" id="shStrip" aria-hidden="true"></div>
+      <div class="shape-total"><span>Total</span><b id="shTotal"></b></div>
+    </div>
     <div class="field"><div class="field-head"><h2>Focus</h2><span class="hint">Optional, pick any</span></div>
       <div class="chips">${FOCUS.map(([k, l]) => `<button type="button" class="chip" data-focus="${k}">${l}</button>`).join('')}</div></div>
     <div class="field"><div class="field-head"><h2>Favourites</h2></div>
@@ -2246,6 +2490,22 @@ function renderBibs() {
   box.querySelectorAll('[data-addbib]').forEach(b => b.onclick = () => { S.bibSets.push({ c: b.dataset.addbib, n: 10 }); renderBibs(); syncSetup(); });
   box.querySelectorAll('[data-delbib]').forEach(b => b.onclick = () => { S.bibSets.splice(+b.dataset.delbib, 1); renderBibs(); syncSetup(); });
 }
+/* shape of the evening: sliders, live total and the coloured bar */
+function syncShape() {
+  const coaches = S.coaches.unknown ? 2 : S.coaches.max, P = S.players.unknown ? 14 : Math.round((S.players.min + S.players.max) / 2);
+  const op = S.openerOn ? S.openerMin : 0, stT = S.stations * S.stationMin, gm = S.gameOn ? S.gameMin : 0, total = op + stT + gm;
+  $('#shOpener').checked = S.openerOn; $('#shGame').checked = S.gameOn;
+  $('#shOpenerMin').value = S.openerMin; $('#shStMin').value = S.stationMin; $('#shGameMin').value = S.gameMin;
+  $('#shOpenerOut').textContent = S.openerMin + ' min'; $('#shStOut').textContent = S.stationMin + ' min'; $('#shGameOut').textContent = S.gameMin + ' min';
+  $('#shOpenerRow').hidden = !S.openerOn; $('#shGameRow').hidden = !S.gameOn;
+  $('#shOpenerCard').classList.toggle('off', !S.openerOn); $('#shGameCard').classList.toggle('off', !S.gameOn);
+  $('#shStLine').textContent = `${S.stations} × ${S.stationMin} min = ${stT} min. Groups of about ${Math.max(1, Math.round(P / S.stations))}.`;
+  const w = $('#shWarn'), extra = S.stations - coaches;
+  w.hidden = extra <= 0;
+  w.textContent = extra > 0 ? `${S.stations} stations but ${coaches} coaches: ${extra === 1 ? 'one station needs' : extra + ' stations need'} a parent helper.` : '';
+  $('#shStrip').innerHTML = [op ? `<span class="a" style="flex:${op}">${op >= 6 ? 'Opener' : ''}</span>` : '', `<span class="s" style="flex:${stT}">${S.stations} stations</span>`, gm ? `<span class="g" style="flex:${gm}">${gm >= 6 ? 'Game' : ''}</span>` : ''].join('');
+  $('#shTotal').textContent = total + ' min';
+}
 function syncSetup() {
   document.querySelectorAll('[data-out]').forEach(o => {
     const path = o.dataset.out;
@@ -2263,9 +2523,8 @@ function syncSetup() {
     f.querySelector('[data-unknown]').setAttribute('aria-pressed', S[k].unknown);
   });
   document.querySelector('[data-clear="balls"]').setAttribute('aria-pressed', S.balls == null);
-  document.querySelectorAll('[data-len]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.len === S.length));
-  document.querySelectorAll('[data-arr]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.arr === S.arrival));
-  $('#squadRow').hidden = !S.arrival;
+  syncShape();
+  $('#squadRow').hidden = !S.openerOn;
   document.querySelector('[data-squads]').setAttribute('aria-pressed', S.squads);
   document.querySelectorAll('[data-focus]').forEach(b => b.setAttribute('aria-pressed', S.focus.includes(b.dataset.focus)));
   document.querySelector('[data-favfirst]').setAttribute('aria-pressed', S.favFirst);
@@ -2301,7 +2560,7 @@ function setVal(path, raw) {
       if (m === 'min' && r.max < r.min) r.max = r.min;
       if (m === 'max' && r.min > r.max) r.min = r.max;
     }
-  } else if (path === 'drills' || path === 'pitches') { if (!isNaN(v)) S[path] = clamp(v, LIMITS[path][0], LIMITS[path][1]); }
+  } else if (path === 'drills' || path === 'pitches' || path === 'stations') { if (!isNaN(v)) S[path] = clamp(v, LIMITS[path][0], LIMITS[path][1]); }
   else S[path] = txt === '' || isNaN(v) ? null : clamp(v, LIMITS[path][0], LIMITS[path][1]);
   syncSetup();
 }
@@ -2333,8 +2592,11 @@ function bindSetup() {
   bindSteppers(root);
   root.querySelectorAll('[data-unknown]').forEach(b => b.onclick = () => { const k = b.dataset.unknown; S[k].unknown = !S[k].unknown; syncSetup(); });
   root.querySelector('[data-clear="balls"]').onclick = () => { if (S.balls == null) step('balls', 0); else { S.balls = null; syncSetup(); } };
-  root.querySelectorAll('[data-len]').forEach(b => b.onclick = () => { S.length = +b.dataset.len; syncSetup(); });
-  root.querySelectorAll('[data-arr]').forEach(b => b.onclick = () => { S.arrival = +b.dataset.arr; syncSetup(); });
+  $('#shOpener').onchange = e => { S.openerOn = e.target.checked; syncSetup(); };
+  $('#shGame').onchange = e => { S.gameOn = e.target.checked; syncSetup(); };
+  $('#shOpenerMin').oninput = e => { S.openerMin = +e.target.value; syncShape(); };
+  $('#shStMin').oninput = e => { S.stationMin = +e.target.value; syncShape(); };
+  $('#shGameMin').oninput = e => { S.gameMin = +e.target.value; syncShape(); };
   root.querySelector('[data-squads]').onclick = () => { S.squads = !S.squads; syncSetup(); };
   root.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => {
     const f = b.dataset.focus;
@@ -2344,9 +2606,12 @@ function bindSetup() {
   root.querySelector('[data-favfirst]').onclick = () => { S.favFirst = !S.favFirst; syncSetup(); };
   $('#goBtn').onclick = () => {
     delete S.forceStations;
+    S.length = (S.openerOn ? S.openerMin : 0) + S.stations * S.stationMin + (S.gameOn ? S.gameMin : 0);
+    S.arrival = S.openerOn ? S.openerMin : 0;
     const a = document.activeElement;
     if (a && a.classList && a.classList.contains('num-in')) setVal(a.dataset.out, a.value);
     PLAN = buildPlan(S);
+    rememberPlan(PLAN);
     document.querySelector('[data-go="plan"]').disabled = false;
     renderPlan();
     show('plan');
@@ -2401,7 +2666,8 @@ const BIB_CODE = { Yellow: 'Y', Orange: 'O', Blue: 'B', Green: 'G', Red: 'R', Pi
 function planLink(P) {
   const st = P.st, rg = r => r.unknown ? 'u' : `${r.min}-${r.max}`;
   const bibs = (st.bibSets || []).map(b => (BIB_CODE[b.c] || 'Y') + b.n).join('_');
-  const bits = ['2', rg(st.players), rg(st.coaches), st.balls == null ? 'x' : st.balls, st.pitches || 2, st.length, st.arrival || 0, st.squads ? 1 : 0, bibs || 'x', P.slots.map(s => s.d.id).join('~')];
+  const shape = `${st.openerOn ? st.openerMin : 0}-${st.stations}-${st.stationMin}-${st.gameOn ? st.gameMin : 0}`;
+  const bits = ['3', rg(st.players), rg(st.coaches), st.balls == null ? 'x' : st.balls, st.pitches || 2, shape, st.squads ? 1 : 0, bibs || 'x', P.slots.map(s => s.d.id).join('~')];
   return APP_URL + '#p=' + bits.join('.');
 }
 /* Opening a shared link: rebuild the same plan with the same drills */
@@ -2409,15 +2675,16 @@ function openSharedPlan() {
   const m = (location.hash || '').match(/^#p=(.+)$/);
   if (!m) return false;
   const b = decodeURIComponent(m[1]).split('.');
-  if (b[0] !== '2' || b.length < 10) return false;
+  if (b[0] !== '3' || b.length < 9) return false;
   const rg = x => { if (x === 'u') return { min: 1, max: 1, unknown: true }; const [a, z] = x.split('-').map(Number); return { min: a, max: z, unknown: false }; };
   const fromCode = Object.fromEntries(Object.entries(BIB_CODE).map(([k, v]) => [v, k]));
   Object.assign(S, {
-    players: rg(b[1]), coaches: rg(b[2]), balls: b[3] === 'x' ? null : +b[3], pitches: +b[4], length: +b[5], arrival: +b[6], squads: b[7] === '1',
-    bibSets: b[8] === 'x' ? [] : b[8].split('_').map(t => ({ c: fromCode[t[0]] || 'Yellow', n: +t.slice(1) })), focus: [], favFirst: false
+    players: rg(b[1]), coaches: rg(b[2]), balls: b[3] === 'x' ? null : +b[3], pitches: +b[4], squads: b[6] === '1',
+    bibSets: b[7] === 'x' ? [] : b[7].split('_').map(t => ({ c: fromCode[t[0]] || 'Yellow', n: +t.slice(1) })), focus: [], favFirst: false
   });
-  const ids = b[9].split('~');
-  S.forceStations = Math.max(1, ids.length - 2);     // arrivals or warm-up + final game, the rest are stations
+  const [op, ns, sm, gm] = b[5].split('-').map(Number);
+  Object.assign(S, { openerOn: op > 0, openerMin: op || 10, stations: ns, stationMin: sm, gameOn: gm > 0, gameMin: gm || 14 });
+  const ids = b[8].split('~');
   PLAN = buildPlan(S, 1);
   if (PLAN.slots.length === ids.length) {
     PLAN.slots.forEach((sl, i) => {
@@ -2442,7 +2709,7 @@ function sessionText(P) {
       L.push(`*${b.start}–${b.end}′ Stations* (${b.R} min each, groups move on)`);
       ph.forEach((i, s) => L.push(`  ${s + 1}. ${P.slots[i].d.name} (${LAYOUT.at[i]})`));
     } else {
-      const label = sl.role === 'a' ? 'Arrivals and warm-up' : sl.role === 'w' ? 'Warm-up' : sl.role === 'g' ? 'Final game' : 'Everyone';
+      const label = sl.role === 'a' ? 'Opener' : sl.role === 'w' ? 'Warm-up' : sl.role === 'g' ? 'Final game' : 'Everyone';
       L.push(`*${sl.start}–${sl.start + sl.mins}′ ${label}:* ${sl.d.name}`);
     }
   });
@@ -2476,14 +2743,30 @@ const PERIOD_SHORT = ['M1 1st', 'M1 2nd', 'M2 1st', 'M2 2nd'];
 const quartersFor = a => a === 'full' ? [0, 1, 2, 3] : a === 'first' ? [0, 1] : a === 'second' ? [2, 3] : [];
 
 /* --- talking to the box --- */
+/* Load from the sheet. Google's script service sometimes hiccups, so try up to 3 times,
+   and if it still fails keep the last answers we had instead of throwing them away. */
 async function boxLoad() {
-  BOX.loading = true; BOX.error = '';
-  try {
-    const r = await fetch(API, { cache: 'no-store' });
-    const j = await r.json();
-    BOX.info = j.info || {}; BOX.answers = j.answers || []; BOX.loaded = true;
-  } catch (e) { BOX.error = 'Couldn\u2019t reach the sheet. Check your signal and tap Refresh.'; }
+  BOX.loading = true;
+  let lastErr = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      if (attempt) await new Promise(r => setTimeout(r, 900 * attempt));
+      const r = await fetch(API + (API.includes('?') ? '&' : '?') + 't=' + Date.now(), { cache: 'no-store' });
+      const j = await r.json();
+      if (!j || typeof j !== 'object' || !('info' in j)) throw new Error('unexpected reply');
+      BOX.info = j.info || {}; BOX.answers = j.answers || []; BOX.loaded = true; BOX.loadedAt = new Date(); BOX.error = '';
+      try { localStorage.setItem('trainingTonight.box', JSON.stringify({ info: BOX.info, answers: BOX.answers, at: BOX.loadedAt })); } catch (e) { /* storage blocked */ }
+      BOX.loading = false;
+      return true;
+    } catch (e) { lastErr = e; }
+  }
+  if (!BOX.loaded) {                              // nothing loaded this visit: use the copy from last time, if any
+    try { const c = JSON.parse(localStorage.getItem('trainingTonight.box') || 'null'); if (c) { BOX.info = c.info || {}; BOX.answers = c.answers || []; BOX.loaded = true; BOX.loadedAt = new Date(c.at); } } catch (e) { /* none */ }
+  }
+  const when = BOX.loadedAt ? BOX.loadedAt.toLocaleTimeString('en-IE', { hour: 'numeric', minute: '2-digit' }) : '';
+  BOX.error = BOX.loaded ? `Couldn\u2019t update just now. Showing answers from ${when}: tap Refresh to try again.` : 'Couldn\u2019t reach the sheet. Check your signal and tap Refresh.';
   BOX.loading = false;
+  return false;
 }
 async function boxSet(key, value) {
   if (!PIN) { toast('Enter your PIN first'); return false; }
@@ -2759,18 +3042,23 @@ function lineupText(res) {
     L.push(`v ${f.opp || 'TBC'}${f.venue ? ', ' + f.venue : ''}`);
     if (f.meet || f.ko) L.push([f.meet ? `Meet ${f.meet}` : '', f.ko ? `kick-off ${f.ko}` : ''].filter(Boolean).join(', '));
   }
-  const block = (title, on, here) => {
-    L.push('', `*${title}*`, on.map(nm).join(', '));
+  /* two lines per block: who's playing, who's subbing. Within a match, boys who have just
+     come on are *bold* with ↑, boys who have just come off are marked ↓ in the subs. */
+  const block = (title, on, here, prev) => {
+    L.push('', `*${title}*`, on.map(n => prev && !prev.includes(n) ? `*${nm(n)}* ↑` : nm(n)).join(', '));
     const subs = here.filter(n => !on.includes(n));
-    if (subs.length) L.push(`Subs: ${subs.map(nm).join(', ')}`);
+    if (subs.length) L.push('Subs: ' + subs.map(n => prev && prev.includes(n) ? `${nm(n)} ↓` : nm(n)).join(', '));
   };
   res.teams.forEach((t, ti) => {
     if (!t.kids.length) return;
     L.push('', `*━━ ${sq.toUpperCase()} ${ti + 1} ━━*`);
+    let prev = null;
     t.quarters.forEach((q, i) => {
-      if (!q.here.length) return;
-      if (q.same) block(PERIODS[i], q.a, q.here);
-      else { block(`${PERIODS[i]} (first ${h} min)`, q.a, q.here); block(`${PERIODS[i]} (last ${h} min)`, q.b, q.here); }
+      if (i % 2 === 0) prev = null;                  // a new match starts clean
+      if (!q.here.length) { prev = null; return; }
+      if (q.same) block(PERIODS[i], q.a, q.here, prev);
+      else { block(`${PERIODS[i]} (first ${h} min)`, q.a, q.here, prev); block(`${PERIODS[i]} (last ${h} min)`, q.b, q.here, q.a); }
+      prev = q.b;
     });
   });
   return L.join('\n');

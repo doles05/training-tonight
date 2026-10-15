@@ -156,9 +156,11 @@ async function send() {
   st.sending = true; st.error = ''; render();
   const body = JSON.stringify({ type: 'answer', kind: 'match', squad: st.squad, name: st.kid, answer: st.avail });
   try {
-    const r = await fetch(API, { method: 'POST', body });
-    const j = await r.json();
-    if (!j.ok) throw new Error('not saved');
+    let j = null;
+    for (let attempt = 0; attempt < 2 && !(j && j.ok); attempt++) {
+      try { if (attempt) await new Promise(r => setTimeout(r, 1200)); j = await (await fetch(API, { method: 'POST', body })).json(); } catch (e) { j = null; }
+    }
+    if (!j || !j.ok) throw new Error('not saved');
     const words = { full: 'down for the full game.', first: 'down for the first half (match 1).', second: 'down for the second half (match 2).', out: 'marked as can\u2019t play.' };
     st.sent = `${st.kid}\u2019s ${words[st.avail]}`;
     try { localStorage.setItem('tt.parent.kid', st.kid); } catch (e) {}
@@ -171,13 +173,16 @@ async function send() {
 }
 
 async function load() {
-  try {
-    const r = await fetch(API, { cache: 'no-store' });
-    const j = await r.json();
-    INFO = j.info || {}; ANS = j.answers || [];
-  } catch (e) {
-    st.error = 'Couldn\u2019t load the squad lists. Check your signal and reload the page.';
+  for (let attempt = 0; attempt < 3; attempt++) {         // Google's script service sometimes hiccups: try again quietly
+    try {
+      if (attempt) await new Promise(r => setTimeout(r, 900 * attempt));
+      const r = await fetch(API + '?t=' + Date.now(), { cache: 'no-store' });
+      const j = await r.json();
+      INFO = j.info || {}; ANS = j.answers || []; st.error = '';
+      render(); return;
+    } catch (e) { /* try again */ }
   }
+  st.error = 'Couldn\u2019t load the squad lists. Check your signal and reload the page.';
   render();
 }
 load();
