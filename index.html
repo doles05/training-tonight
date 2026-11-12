@@ -140,6 +140,13 @@ main{max-width:680px;margin:0 auto;padding:18px 16px 60px}
   font-weight:800;font-size:16px}
 .explain[aria-expanded="true"]{border-style:solid}
 .walk{margin-top:10px;background:#EEF4FD;border-radius:14px;padding:12px 14px 12px}
+.stepbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.stepbar button{width:48px;height:48px;border-radius:50%;border:0;background:#14213D;color:#fff;font-size:28px;font-weight:900;line-height:1;flex:none}
+.stepinfo{flex:1;display:grid;gap:2px}.stepinfo b{font-size:14px;color:#0F4FA8;text-transform:uppercase;letter-spacing:.04em}.stepinfo span{font-size:16px;font-weight:700;line-height:1.3}
+.steplist li.on{background:#FFE9A8;border-radius:8px;padding:4px 6px;margin-left:-6px;font-weight:700}
+.anim.stepping .svgcap{display:none}
+.anim .cap{display:block;background:#0B1623;color:#fff;font-weight:800;font-size:16px;line-height:1.3;padding:10px 14px 12px;min-height:50px}
+.anim.stepping{aspect-ratio:auto}.anim.stepping svg{display:block;width:100%;aspect-ratio:100/64}.anim.stepping .playbtn{bottom:62px}
 .walk h4{font-size:15px;font-weight:900;color:#0F4FA8;margin-bottom:6px}
 .walk ol{margin:0;padding-left:22px}.walk li{margin:7px 0;font-size:17px}
 .walk li::marker{font-weight:900;color:#0F4FA8}
@@ -543,8 +550,12 @@ function drawGoal(svg, [x, y, s, w]) {
 }
 function mountAnim(svg, an) {
   svg.setAttribute('viewBox', '0 0 100 64');
-  sv('rect', { width: 100, height: 64, fill: '#2E8B4F' }, svg);
-  for (let i = 0; i < 8; i += 2) sv('rect', { x: i * 12.5, y: 0, width: 12.5, height: 64, fill: '#34965A' }, svg);
+  const defs = sv('defs', {}, svg), uid = 'g' + Math.random().toString(36).slice(2, 7);
+  defs.innerHTML = `<radialGradient id="${uid}p" cx=".35" cy=".3" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></radialGradient>
+    <marker id="${uid}a" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0,0 L6,3 L0,6 Z" fill="#fff"/></marker>
+    <marker id="${uid}b" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="3.6" markerHeight="3.6" orient="auto-start-reverse"><path d="M0,0 L6,3 L0,6 Z" fill="#FFE14D"/></marker>`;
+  sv('rect', { width: 100, height: 64, fill: '#2B6B3C' }, svg);
+  for (let i = 0; i < 8; i += 2) sv('rect', { x: i * 12.5, y: 0, width: 12.5, height: 64, fill: '#2F743F' }, svg);
   an.areas.forEach(([x, y, w, h]) => sv('rect', { x, y, width: w, height: h, fill: 'none', stroke: 'rgba(255,255,255,.8)', 'stroke-width': .45 }, svg));
   an.zs.forEach(([x, y, w, h, c, l]) => {
     sv('rect', { x, y, width: w, height: h, fill: c }, svg);
@@ -552,37 +563,91 @@ function mountAnim(svg, an) {
   });
   an.ls.forEach(([x1, y1, x2, y2]) => sv('line', { x1, y1, x2, y2, stroke: 'rgba(255,255,255,.7)', 'stroke-width': .4, 'stroke-dasharray': '1.4 1.1' }, svg));
   an.gs.forEach(g => drawGoal(svg, g));
-  an.cs.forEach(([x, y, c]) => sv('path', { d: `M${x - 1.3},${y + 1} L${x},${y - 1.6} L${x + 1.3},${y + 1} Z`, fill: CCOL[c] || c, stroke: 'rgba(0,0,0,.4)', 'stroke-width': .25 }, svg));
+  /* flat ring cones, like a tactics board */
+  an.cs.forEach(([x, y, c]) => {
+    const col = CCOL[c] || c;
+    sv('ellipse', { cx: x, cy: y + .35, rx: 1.45, ry: .95, fill: 'rgba(0,0,0,.35)' }, svg);
+    sv('ellipse', { cx: x, cy: y, rx: 1.4, ry: .9, fill: col, stroke: 'rgba(0,0,0,.45)', 'stroke-width': .22 }, svg);
+    sv('ellipse', { cx: x, cy: y, rx: .5, ry: .32, fill: 'rgba(0,0,0,.45)' }, svg);
+  });
+  /* arrows go under the players so they never hide anyone */
+  const arrows = sv('g', {}, svg);
   const pls = an.ps.map(p => {
     const g = sv('g', {}, svg);
-    const c = sv('circle', { r: 2.3, fill: PCOL[p.c] || p.c, stroke: '#fff', 'stroke-width': .55 }, g);
+    sv('ellipse', { cy: .5, rx: 2.6, ry: 2.3, fill: 'rgba(0,0,0,.3)' }, g);
+    const c = sv('circle', { r: 2.5, fill: PCOL[p.c] || p.c, stroke: '#fff', 'stroke-width': .5 }, g);
+    sv('circle', { r: 2.5, fill: `url(#${uid}p)` }, g);
     let tx = null;
-    if (p.l || p.cols) { tx = sv('text', { y: 1, 'text-anchor': 'middle', 'font-size': 2.6, 'font-weight': 900, fill: p.c === 'y' ? '#14213D' : '#fff' }, g); tx.textContent = p.l; }
+    if (p.l || p.cols) { tx = sv('text', { y: 1, 'text-anchor': 'middle', 'font-size': 2.7, 'font-weight': 900, fill: p.c === 'y' ? '#14213D' : '#fff' }, g); tx.textContent = p.l; }
     g._c = c; g._t = tx;
     return g;
   });
   const bls = an.bs.map(() => {
     const g = sv('g', {}, svg);
-    sv('circle', { r: 1.2, fill: '#fff', stroke: '#14213D', 'stroke-width': .35 }, g);
-    sv('circle', { r: .42, fill: '#14213D' }, g);
+    sv('ellipse', { cy: .45, rx: 1.4, ry: 1.1, fill: 'rgba(0,0,0,.35)' }, g);
+    sv('circle', { r: 1.3, fill: '#fff', stroke: '#14213D', 'stroke-width': .3 }, g);
+    sv('path', { d: 'M0,-.55 L.5,-.18 L.32,.42 L-.32,.42 L-.5,-.18 Z M-1.05,-.6 l.5,-.3 M1.05,-.6 l-.5,-.3 M-.95,.7 l.3,-.4 M.95,.7 l-.3,-.4 M0,1.2 l0,-.5', fill: '#14213D', stroke: '#14213D', 'stroke-width': .18 }, g);
     return g;
   });
-  const txs = an.ts.map(tt => sv('text', { x: tt.x, y: tt.y, 'text-anchor': 'middle', 'font-size': tt.size, 'font-weight': 900,
-    stroke: 'rgba(0,0,0,.6)', 'stroke-width': .7, 'paint-order': 'stroke', fill: '#fff' }, svg));
+  /* captions sit in a dark pill so they read over any background */
+  const txs = an.ts.map(tt => {
+    const g = sv('g', { class: 'svgcap' }, svg);
+    const r = sv('rect', { x: tt.x, y: tt.y - tt.size * .95, height: tt.size * 1.5, rx: tt.size * .75, fill: 'rgba(10,20,30,.62)' }, g);
+    const tx = sv('text', { x: tt.x, y: tt.y, 'text-anchor': 'middle', 'font-size': tt.size, 'font-weight': 900, fill: '#fff' }, g);
+    tx._r = r; tx._size = tt.size; tx._x = tt.x;
+    return tx;
+  });
+  const fitPill = tx => { const w = Math.min(96, tx.textContent.length * tx._size * .58 + tx._size * 1.4); tx._r.setAttribute('width', w); tx._r.setAttribute('x', tx._x - w / 2); };
+  /* where a player or the ball is heading next: an arrow drawn just before and during the move */
+  const LEAD = .08;
+  function nextMove(k, tl, pos) {
+    const i = seg(k, tl), a = k[i], b = k[i + 1];
+    if (!b) return null;
+    if (Math.hypot(b.x - a.x, b.y - a.y) > 2.5 && Math.hypot(b.x - pos[0], b.y - pos[1]) > 1.5) return b;   // on the move: show where to
+    const c = k[i + 2];
+    if (c && b.t - tl < LEAD && Math.hypot(c.x - b.x, c.y - b.y) > 2.5) return c;                                   // about to move: show it early
+    return null;
+  }
+  function arrow(from, to, kind) {
+    const dx = to[0] - from[0], dy = to[1] - from[1], L = Math.hypot(dx, dy);
+    if (L < 2) return;
+    const nx = -dy / L, ny = dx / L, bend = kind === 'run' ? Math.min(4, L * .18) : 0;
+    const mx = (from[0] + to[0]) / 2 + nx * bend, my = (from[1] + to[1]) / 2 + ny * bend;
+    const ex = to[0] - dx / L * 2.9, ey = to[1] - dy / L * 2.9;
+    sv('path', { d: `M${from[0].toFixed(1)},${from[1].toFixed(1)} Q${mx.toFixed(1)},${my.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)}`, fill: 'none',
+      stroke: kind === 'run' ? 'rgba(255,255,255,.85)' : '#FFE14D', 'stroke-width': kind === 'run' ? .5 : .65, 'stroke-dasharray': kind === 'run' ? '1.6 1.1' : '',
+      'stroke-linecap': 'round', 'marker-end': `url(#${uid}${kind === 'run' ? 'a' : 'b'})` }, arrows);
+  }
   function draw(t) {
+    while (arrows.firstChild) arrows.removeChild(arrows.firstChild);
     an.ps.forEach((p, i) => {
       const [x, y] = pPos(p, t), g = pls[i];
       g.setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+      if (!p.lin && p.k.length <= 14) { const d = nextMove(p.k, wrap(t + p.ph), [x, y]); if (d) arrow([x, y], [d.x, d.y], 'run'); }
       if (p.cols) {
         let s = p.cols[0]; for (const st of p.cols) if (st[0] <= wrap(t + p.ph)) s = st;
         if (g._key !== s) { g._key = s; g._c.setAttribute('fill', PCOL[s[1]] || s[1]); g._t.textContent = s[2] || ''; g._t.setAttribute('fill', s[1] === 'y' ? '#14213D' : '#fff'); }
       }
     });
-    an.bs.forEach((b, i) => { const [x, y, s] = bPos(an, b, t); bls[i].setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${s.toFixed(2)})`); });
+    an.bs.forEach((b, i) => {
+      const [x, y, s] = bPos(an, b, t); bls[i].setAttribute('transform', `translate(${x.toFixed(2)},${y.toFixed(2)}) scale(${s.toFixed(2)})`);
+      if (b.lin) return;
+      /* a pass: the ball leaves one player for another, or for a spot */
+      const tl = wrap(t + b.ph), k = b.k;
+      for (let j = 0; j < k.length - 1; j++) {
+        const a = k[j], c = k[j + 1];
+        if (c.t < tl || (a.t > tl && a.t - tl > LEAD)) continue;
+        if (a.who !== undefined && c.who !== undefined && a.who === c.who) break;
+        if (a.who === undefined && c.who === undefined) break;
+        const dest = c.who !== undefined ? feet(an, an.names[c.who], c.t - b.ph).slice(0, 2) : [c.x, c.y];
+        arrow([x, y], dest, 'pass');
+        break;
+      }
+    });
     an.ts.forEach((tt, i) => {
       let s = tt.steps[0];
       for (const st of tt.steps) if (st[0] <= t) s = st;
-      if (txs[i].textContent !== s[1]) txs[i].textContent = s[1];
+      if (txs[i].textContent !== s[1]) { txs[i].textContent = s[1]; fitPill(txs[i]); }
       txs[i].setAttribute('fill', s[2] || '#fff');
     });
   }
@@ -618,6 +683,7 @@ function tick(now) {
     if (s.playing && s.visible) {
       const dt = s.last ? Math.min(.1, (now - s.last) / 1000) : 0;
       s.t = (s.t + dt * s.speed / s.an.dur) % 1;
+      if (s.loop && (s.t >= s.loop[1] || s.t < s.loop[0])) s.t = s.loop[0];   // step mode: play one phase on repeat
       s.draw(s.t);
       s.last = now;
     }
@@ -1827,6 +1893,358 @@ D({ id: 'skillcorners', name: 'Skill Corners', role: 'a w', focus: ['ballmastery
   }
 });
 
+/* ---------------- NEW DRILLS (foundation-phase practice: lots of touches, small areas, a game in everything) ---------------- */
+
+D({ id: 'movecorridor', name: 'Skill Move Corridor', role: 's w', focus: ['dribbling', 'ballmastery', 'bothfeet'], int: 2, dur: [6, 10], min: 3, max: 12, cones: [9, 0],
+  setup: ['Mark 3 lanes about 15 big steps long, a cone at the start, middle and end of each.', 'One player per lane with a ball, the rest wait at the start cone.'],
+  how: 'Dribble to the middle cone, do the move of the day on it (drag-back, inside-outside or step-over), then accelerate to the end. Jog back down the outside and go again. Change the move every 2 minutes.',
+  pts: ['Slow into the move, fast out of it', 'Small touch before the cone, big touch after', 'Same move with the other foot next time'],
+  easy: 'Walk through the move with no ball first.', hard: 'Two moves in a row, or a defender shadows from behind.',
+  walk: ['Three lanes side by side, a cone at the start, middle and end of each.', 'Dribble slowly to the middle cone.', 'Do the move on the cone: pull the ball back, or knock it inside then outside.', 'Burst to the end cone, then jog back down the outside of your lane.'],
+  anim: () => {
+    const a = A(8).area(14, 8, 72, 48);
+    [16, 32, 48].forEach((y, i) => {
+      a.cone(18, y, 'y').cone(50, y, 'o').cone(82, y, 'y');
+      const k = `0:18,${y} .36:47,${y} .44:50,${y + 3} .5:46,${y - 1} .72:82,${y} .8:84,${y + 5} .96:20,${y + 5}`;
+      a.p(['r', 'b', 'y'][i], k, '', 'l' + i).ph(i * .12).b(`0@l${i} .8@l${i} .81:84,${y + 5} .96:84,${y + 5} .97@l${i}`, i * .12);
+    });
+    return a.text(50, 60, [[0, 'Dribble in slowly'], [.36, 'Do the move on the cone', '#FFC300'], [.5, 'Burst out fast!', '#8CFF7A'], [.8, 'Jog back and go again']]);
+  }
+});
+
+D({ id: 'crocodiles', name: 'Crocodile River', role: 'w s', focus: ['dribbling', 'speed', 'defending'], int: 3, dur: [6, 10], min: 6, max: 16, bibs: 'few', cones: [8, 0],
+  setup: ['Mark a river about 20 big steps wide and 25 long with two lines of cones.', 'Crocodiles ({few}, in bibs) stand on a line across the middle of the river and can only move along that line.', 'Everyone else waits on one bank with a ball.'],
+  how: 'Dribble across the river without a crocodile tapping your ball. Crocodiles can only slide sideways along their line. Tapped? Do 5 toe taps on the bank and go again. Last two across become the new crocodiles.',
+  pts: ['Look for the gap before you go', 'Change speed: slow, then burst past', 'Crocodiles: watch the ball, not the boy'],
+  easy: 'One crocodile.', hard: 'Two crocodile lines, or crocodiles can take one step off their line.',
+  walk: ['Everyone on one bank with a ball. Two crocodiles stand on a line across the middle.', 'Crocodiles can only slide left and right along their line.', 'On "Go!", dribble across. If a crocodile taps your ball, go back and do 5 toe taps.', 'Last two across become the new crocodiles.'],
+  anim: () => A(9).area(20, 6, 60, 52).zone(20, 29, 60, 6, 'rgba(76,201,240,.35)').line(20, 32, 80, 32)
+    .p('y', '0:36,32 .2:46,32 .4:34,32 .6:58,32 .8:40,32', 'C', 'c1').face(0, -1, true)
+    .p('y', '0:66,32 .2:56,32 .4:70,32 .6:50,32 .8:64,32', 'C', 'c2').face(0, -1, true)
+    .p('r', '0:26,10 .1:26,10 .3:26,24 .36:26,24 .5:24,50 .6:24,50 .8:76,52 .95:26,10', '', 'r1')
+    .p('r', '0:50,10 .1:50,10 .34:52,22 .4:52,22 .55:42,50 .6:42,50 .8:76,52 .95:50,10', '', 'r2')
+    .p('r', '0:74,10 .1:74,10 .3:72,26 .38:72,26 .52:70,50 .6:70,50 .8:76,52 .95:74,10', '', 'r3')
+    .b('0@r1 .8@r1 .81:76,56 .95:76,56 .96@r1').b('0@r2 .8@r2 .81:72,56 .95:72,56 .96@r2').b('0@r3 .8@r3 .81:80,56 .95:80,56 .96@r3')
+    .text(50, 4.5, [[0, 'Wait on the bank'], [.1, 'Go! Find the gap', '#8CFF7A'], [.36, 'Burst past the crocodiles', '#FFC300'], [.6, 'Safe! Walk round and go again']])
+});
+
+D({ id: 'treasure', name: 'Treasure Island', role: 'w s g', focus: ['dribbling', 'speed', 'teamwork'], int: 3, dur: [6, 10], min: 4, max: 16, cones: [16, 0],
+  setup: ['Put a pile of cones (the treasure) in the middle of the area.', 'Mark 4 home corners, one per team, each team with a ball each.'],
+  how: 'Dribble to the island, pick up ONE cone, dribble it home, then go again. When the pile is gone, you can steal from other homes. Most treasure after 2 minutes wins.',
+  pts: ['Ball close, head up on the way in', 'Stop the ball with your sole before you pick up', 'Fast feet on the way home'],
+  easy: 'Walk back with the cone, dribble only on the way out.', hard: 'Weaker foot only; or carry the cone on your head.',
+  walk: ['A pile of cones in the middle. Each team has a home corner.', 'Dribble to the pile, stop the ball, pick up one cone.', 'Dribble home with the ball and drop the cone in your corner.', 'Keep going. When the pile is empty you may steal from other corners.'],
+  anim: () => {
+    const a = A(8).area(10, 6, 80, 52).cones('47,30 50,28 53,30 48,34 52,34', 'y')
+      .zone(10, 6, 12, 10, 'rgba(230,57,70,.35)').zone(78, 6, 12, 10, 'rgba(30,111,217,.35)').zone(10, 48, 12, 10, 'rgba(255,195,0,.35)').zone(78, 48, 12, 10, 'rgba(18,161,80,.35)');
+    const H = [[16, 11, 'r'], [84, 11, 'b'], [16, 53, 'y'], [84, 53, 'g']];
+    H.forEach(([x, y, c], i) => { a.p(c, `0:${x},${y} .38:${x > 50 ? 56 : 44},${y > 32 ? 36 : 28} .46:${x > 50 ? 56 : 44},${y > 32 ? 36 : 28} .86:${x},${y}`, '', 'h' + i).ph(i * .17).b(`0@h${i} 1@h${i}`, i * .17); });
+    return a.text(50, 60, [[0, 'Dribble to the island'], [.38, 'Stop the ball, grab a cone', '#FFC300'], [.46, 'Dribble it home!', '#8CFF7A']]);
+  }
+});
+
+D({ id: 'squareturns', name: 'Square of Turns', role: 's w', focus: ['turning', 'dribbling', 'bothfeet'], int: 2, dur: [6, 10], min: 3, max: 8, cones: [4, 0],
+  setup: ['Mark a square about 10 big steps a side with a cone at each corner.', 'Players spread round the square, one ball each.'],
+  how: 'Dribble to the next corner and turn round the cone with the named turn: inside hook, outside hook, drag-back, or Cruyff. Everyone goes the same way. Coach changes the turn every minute.',
+  pts: ['Get your body between the ball and the cone', 'Turn tight: keep the ball close', 'Accelerate out of the turn'],
+  easy: 'One turn only, walking pace.', hard: 'Change direction on "Switch!"; both feet.',
+  walk: ['A square with a cone at each corner. Everyone dribbles the same way round it.', 'Dribble to the next cone.', 'Turn round the cone with the turn the coach named, such as a drag-back.', 'Speed up to the next cone and do it again.'],
+  anim: () => {
+    const a = A(10).corners(30, 12, 40, 40);
+    const C = [[30, 12], [70, 12], [70, 52], [30, 52]];
+    const path = i => { const k = []; for (let j = 0; j < 4; j++) { const c = C[(i + j) % 4], n = C[(i + j + 1) % 4], t = j / 4; k.push(K(t, c[0] + (n[0] - c[0]) * .08, c[1] + (n[1] - c[1]) * .08), K(t + .19, n[0] - (n[0] - c[0]) * .06 + (n[1] - c[1]) * .05, n[1] - (n[1] - c[1]) * .06 - (n[0] - c[0]) * .05), K(t + .24, n[0] + (n[0] - c[0]) * .05, n[1] + (n[1] - c[1]) * .05)); } return k.join(' '); };
+    [0, 1, 2].forEach(i => a.p(['r', 'b', 'y'][i], path(i), '', 's' + i).b(`0@s${i} 1@s${i}`));
+    return a.text(50, 60, [[0, 'Dribble to the corner, turn round the cone, speed up']]);
+  }
+});
+
+D({ id: 'numberspass', name: 'Numbers Passing', role: 's w', focus: ['passing', 'firsttouch', 'teamwork'], int: 2, dur: [6, 10], min: 4, max: 8, ball: 1, cones: [4, 0],
+  setup: ['Mark a box about 15 × 15 big steps.', 'Groups of 4–6 in the box, one ball. Give each player a number.'],
+  how: 'Everyone moves around the box. Pass in number order: 1 to 2, 2 to 3, and so on, back to 1. Before you receive, find a space where your passer can see you.',
+  pts: ['Know who you get it from and who you give it to', 'Move into space BEFORE the pass comes', 'Call your number'],
+  easy: 'Walking pace, two touches.', hard: 'Two balls going at once; or one touch.',
+  walk: ['Each player gets a number. Everyone walks around the box.', 'Number 1 passes to number 2.', 'Number 2 finds a space, receives, and passes to number 3.', 'Keep going round. The last number passes back to 1.'],
+  anim: () => A(9).area(22, 8, 56, 48).corners(22, 8, 56, 48)
+    .p('b', '0:30,16 .25:34,44 .5:60,46 .75:66,18 1:30,16', '1', 'n1')
+    .p('b', '0:62,20 .25:58,14 .5:30,24 .75:36,40 1:62,20', '2', 'n2')
+    .p('b', '0:40,46 .25:66,36 .5:66,14 .75:48,16 1:40,46', '3', 'n3')
+    .p('b', '0:68,42 .25:36,24 .5:40,40 .75:60,48 1:68,42', '4', 'n4')
+    .b('0@n1 .12@n1 .2@n2 .34@n2 .42@n3 .56@n3 .64@n4 .78@n4 .86@n1')
+    .text(50, 5, [[0, 'Pass in number order: 1 → 2 → 3 → 4', '#FFC300']])
+});
+
+D({ id: 'centresquare', name: 'Centre Square Combinations', role: 's', focus: ['passing', 'firsttouch', 'teamwork'], int: 2, dur: [8, 12], min: 5, max: 9, ball: 1, cones: [8, 0],
+  setup: ['Mark a small square (4 cones, about 4 big steps a side) in the middle of a circle of cones about 12 big steps across.', 'One player in the square, the others spread round the circle. One ball.'],
+  how: 'Outside player passes into the middle. The middle player lays it back with one touch, then turns to receive from the next outside player. Keep it flowing round the circle. Swap the middle player every 45 seconds.',
+  pts: ['Middle player: open up, know where the next ball is coming from', 'Firm pass in, soft lay-off back', 'Outside players: move to a new cone after your pass'],
+  easy: 'Middle player can take two touches.', hard: 'Outside players pass to a DIFFERENT player after the lay-off; two balls.',
+  walk: ['A small square in the middle of a circle of players. One player stands in the square.', 'An outside player passes into the middle.', 'The middle player passes it straight back with one touch.', 'The middle player turns and the next outside player passes in. Keep going round.'],
+  anim: () => {
+    const a = A(9).corners(45, 26, 10, 12, 'o');
+    const R = [[50, 10], [78, 20], [78, 44], [50, 54], [22, 44], [22, 20]];
+    R.forEach(([x, y], i) => a.cone(x + (x > 50 ? 3 : x < 50 ? -3 : 0), y + (y > 32 ? 3 : -3), 'y').p('b', `0:${x},${y}`, String(i + 1), 'o' + i));
+    a.p('r', '0:50,32', 'M', 'mid');
+    const s = []; for (let i = 0; i < 6; i++) { const t = i / 6; s.push(`${(t).toFixed(3)}@o${i} ${(t + .06).toFixed(3)}@o${i} ${(t + .1).toFixed(3)}@mid ${(t + .12).toFixed(3)}@mid ${(t + .16).toFixed(3)}@o${i}`); }
+    return a.b(s.join(' ')).text(50, 61, [[0, 'Pass in, lay it off, next player', '#FFC300']]);
+  }
+});
+
+D({ id: 'passandfollow', name: 'Pass and Follow Lines', role: 's w', focus: ['passing', 'firsttouch', 'running'], int: 2, dur: [6, 10], min: 4, max: 10, ball: 1, cones: [2, 0],
+  setup: ['Two lines of players face each other about 10 big steps apart, a cone at the front of each.', 'One ball at the front of one line.'],
+  how: 'Pass to the front player of the other line, then run and join the BACK of that line. The receiver takes a touch and does the same. Count passes in a row without a mistake.',
+  pts: ['Pass with the inside of the foot, firm along the ground', 'Run after your pass straight away', 'First touch out of your feet, then pass'],
+  easy: 'Closer together; stop the ball before passing.', hard: 'One touch; or a second ball starts from the other line.',
+  walk: ['Two lines face each other. The front player of one line has the ball.', 'Pass to the front player opposite.', 'Run across and join the back of the other line.', 'The receiver takes a touch, passes back across, and runs too.'],
+  anim: () => A(8).cone(30, 32, 'y').cone(70, 32, 'y')
+    .p('r', '0:30,32 .12:30,32 .18:40,40 .34:74,46 .5:76,40 .75:72,32 1:70,32', '', 'a1').face(1, 0)
+    .p('b', '0:70,32 .5:70,32 .62:60,24 .84:26,18 1:30,32', '', 'b1').face(-1, 0)
+    .p('r', '0:26,32 .25:26,32 .5:30,32 .6:30,32 .68:38,26 .88:68,22 1:72,40', '', 'a2').face(1, 0)
+    .p('b', '0:74,32 .5:74,32 1:70,32', '', 'b2').face(-1, 0)
+    .b('0@a1 .12@a1 .2@b1 .5@b1 .58@a2 .6@a2 .7@b2 1@b2')
+    .text(50, 58, [[0, 'Pass across, then run to the back of the other line']])
+});
+
+D({ id: 'touchgates', name: 'First Touch Through the Gate', role: 's', focus: ['firsttouch', 'passing', 'bothfeet'], int: 2, dur: [6, 10], min: 2, max: 8, ball: 'half', cones: [6, 0],
+  setup: ['Pairs about 8 big steps apart. Make a small gate (2 cones) in front of each receiver, 2 big steps wide.', 'One ball per pair.'],
+  how: 'Pass to your partner. Their first touch must take the ball THROUGH the gate, then they pass it back through their own gate. Point for every clean touch through.',
+  pts: ['Get your body behind the ball', 'Touch it forward and to the side, not straight back', 'Use the inside of the foot, soft and under control'],
+  easy: 'Wider gate; stop the ball first.', hard: 'Outside of the foot only; or a bouncing ball.',
+  walk: ['Pairs face each other with a small gate in front of each player.', 'Pass to your partner.', 'Their first touch takes the ball through the gate.', 'They pass it back through the gate. Count your clean touches.'],
+  anim: () => A(7).gate(36, 32, true, 6).gate(64, 32, true, 6)
+    .p('r', '0:28,32 .3:28,32 .4:40,30 .5:40,30 .58:28,32', '', 'p1').face(1, 0)
+    .p('b', '0:72,32 .5:72,32 .6:60,34 .85:60,34 .92:72,32', '', 'p2').face(-1, 0)
+    .b('0@p1 .3@p1 .36:62,34 .4@p2 .5@p2 .55:40,30 .6@p1 .85@p1 .88:62,34 1@p2')
+    .text(50, 58, [[0, 'Pass, then take your first touch through the gate']])
+});
+
+D({ id: 'passpressure', name: 'Pass and Press', role: 's', focus: ['firsttouch', 'passing', 'defending'], int: 3, dur: [6, 10], min: 2, max: 8, ball: 'half', cones: [4, 0],
+  setup: ['Pairs about 10 big steps apart with a gate (2 cones) behind each player, about 3 big steps wide.', 'One ball per pair.'],
+  how: 'A passes to B and sprints to press. B must control it and pass the ball through the gate behind A before A gets there. Then swap roles. Point for every pass through.',
+  pts: ['Receiver: first touch away from the presser', 'Passer: sprint straight after your pass', 'Decide early: control, look, pass'],
+  easy: 'Presser walks; bigger gate.', hard: 'Presser can win the ball; one touch only.',
+  walk: ['Pairs face each other, a gate behind each player.', 'A passes to B and sprints towards B.', 'B takes a touch and passes through the gate behind A before A arrives.', 'Swap: B passes to A and presses.'],
+  anim: () => A(8).gate(22, 32, true, 8).gate(78, 32, true, 8)
+    .p('r', '0:30,32 .08:30,32 .3:56,34 .4:56,34 .6:30,32', '', 'a').face(1, 0)
+    .p('b', '0:70,32 .14:70,32 .22:72,26 .5:72,26 .6:70,32 .66:70,32 .9:42,30 1:70,32', '', 'b').face(-1, 0)
+    .b('0@a .08@a .14@b .22@b .25:22,30 .4:22,30 .45@a .6@a .66@a .72:78,32 1:78,32')
+    .text(50, 58, [[0, 'Pass and sprint to press', '#FF6B6B'], [.14, 'Control it, pass through the gate first', '#FFC300'], [.6, 'Now swap roles']])
+});
+
+D({ id: 'tossvolley', name: 'Toss and Volley', role: 's', focus: ['shooting', 'firsttouch', 'agility'], int: 2, dur: [6, 10], min: 2, max: 8, ball: 'half', cones: [2, 0],
+  setup: ['Pairs about 5 big steps apart, a small goal (or 2 cones) behind the kicker.', 'One ball per pair.'],
+  how: 'Server tosses the ball gently underarm. Kicker volleys it back into the server\'s hands, or into the goal if there is one. 5 each then swap. Then try thighs and headers.',
+  pts: ['Eyes on the ball all the way to your foot', 'Toe down, hit it with your laces', 'Keep it low: lean over the ball'],
+  easy: 'Let it bounce once first.', hard: 'Weaker foot; or the server moves after the toss.',
+  walk: ['Pairs face each other, a few steps apart.', 'The server tosses the ball underarm.', 'The kicker volleys it back before it bounces.', 'Five goes each, then swap. Try thigh and head next.'],
+  anim: () => A(7).goal(16, 32, 'L', 9)
+    .p('b', '0:64,32', 'S', 'srv').face(-1, 0)
+    .p('r', '0:36,32 .32:36,32 .4:34,30 .46:36,32', '', 'kk').face(1, 0)
+    .b('0@srv .2@srv .36:40,30^ .4:38,32 .5:62,34^ .55@srv')
+    .text(50, 58, [[0, 'Toss underarm'], [.3, 'Volley it back before it bounces', '#FFC300'], [.55, 'Toss again']])
+});
+
+D({ id: 'strikeralley', name: "Striker's Alley", role: 's', focus: ['shooting', 'dribbling', 'running'], int: 3, dur: [6, 10], min: 3, max: 8, cones: [8, 0],
+  setup: ['A goal with a keeper (or coach). Mark an alley of 4 cones in a line about 12 big steps from goal, then a shooting line 8 big steps out.', 'Players queue at the far end with a ball each.'],
+  how: 'Dribble in and out of the cones, then shoot before the ball crosses the shooting line. Collect your ball, join the back of the queue. Next player starts when the shot is taken.',
+  pts: ['Head up on the last cone: where is the keeper?', 'Big last touch to set the shot', 'Hit it with your laces, follow through'],
+  easy: 'Fewer cones; no keeper.', hard: 'Weaker foot; a defender starts chasing from the side.',
+  walk: ['A line of cones leads to a shooting line in front of the goal.', 'Dribble in and out of the cones.', 'Shoot before you cross the line.', 'Get your ball, join the back. Next player goes.'],
+  anim: () => A(8).goal(92, 32, 'R', 12).cones('26,32 36,32 46,32 56,32', 'o').line(68, 18, 68, 46)
+    .p('k', '0:90,32 .3:90,30 .42:90,36 .6:90,32', 'GK', 'gk').face(-1, 0, true)
+    .p('r', '0:14,32 .1:16,32 .2:31,27 .28:41,37 .36:51,27 .44:61,34 .5:64,33 .58:64,33 .78:40,56 .96:14,32', '', 's1')
+    .p('r', '0:8,32 .5:8,32 .6:14,32 1:14,32', '', 's2')
+    .b('0@s1 .5@s1 .54:90,38 .58:90,38 .6@s2 1@s2')
+    .text(50, 60, [[0, 'Dribble through the alley'], [.44, 'Shoot before the line!', '#FFC300'], [.58, 'Collect your ball, next player']])
+});
+
+D({ id: 'onetwoshoot', name: '1-2 and Shoot', role: 's', focus: ['passing', 'shooting', 'running'], int: 3, dur: [6, 10], min: 3, max: 8, ball: 'half', cones: [3, 0],
+  setup: ['A goal with a keeper or coach. A coach or player stands on a cone about 10 big steps from goal, just off centre.', 'Players queue 20 big steps out with a ball each.'],
+  how: 'Dribble forward, pass to the wall player, run on and get it back (a one-two), then shoot first time or after one touch. Wall player swaps every 5 goes.',
+  pts: ['Pass and GO: don\'t stand and watch', 'Wall player: one touch, into the runner\'s path', 'Shoot early, low and hard'],
+  easy: 'Take two touches before shooting.', hard: 'Add a defender who starts when the first pass is played.',
+  walk: ['A wall player stands on a cone near the goal.', 'Dribble forward and pass to the wall player.', 'Run past the cone. The wall player passes it back into your path.', 'Shoot first time. Collect your ball and join the back.'],
+  anim: () => A(8).goal(92, 32, 'R', 12).cone(62, 20, 'y')
+    .p('k', '0:90,32 .4:90,36 .55:90,28 .7:90,32', 'GK', 'gk').face(-1, 0, true)
+    .p('y', '0:62,22', 'W', 'wall').face(-1, .5, true)
+    .p('r', '0:12,36 .08:14,36 .3:42,34 .36:46,34 .52:70,36 .58:72,36 .8:40,58 .98:12,36', '', 'run')
+    .b('0@run .3@run .36@wall .4@wall .5@run .58@run .62:90,36 .8:90,36 .82@run')
+    .text(50, 60, [[0, 'Dribble forward'], [.3, 'Pass to the wall and run', '#FFC300'], [.5, 'Get it back, shoot!', '#8CFF7A'], [.7, 'Collect and go again']])
+});
+
+D({ id: 'targetcorners', name: 'Target Corners', role: 's w', focus: ['shooting', 'passing', 'bothfeet'], int: 2, dur: [6, 10], min: 2, max: 8, cones: [6, 0],
+  setup: ['A goal with no keeper. Stand a cone (or a ball on a cone) inside each bottom corner.', 'Shooting line about 10 big steps out. Players queue with a ball each.'],
+  how: 'Shoot from the line and try to hit a corner cone. Hit the cone = 3 points, in the goal = 1. Keep your own score. After 5 shots, change to your other foot.',
+  pts: ['Pick your corner before you run up', 'Plant foot beside the ball, pointing at the corner', 'Low and hard beats high and soft'],
+  easy: 'Closer shooting line; bigger targets.', hard: 'Shoot from a moving ball: push it out of your feet first.',
+  walk: ['Put a cone in each bottom corner of an empty goal.', 'From the shooting line, pick a corner.', 'Shoot low and try to hit the cone. Cone = 3 points, goal = 1.', 'Five shots, then swap to your other foot.'],
+  anim: () => A(7).goal(92, 32, 'R', 14).cone(91, 26.5, 'y').cone(91, 37.5, 'y').line(62, 18, 62, 46)
+    .p('r', '0:56,32 .25:56,32 .3:60,32 .34:60,32 .6:48,54 .9:56,32', '', 't1')
+    .p('r', '0:48,32 .55:48,32 .6:56,32 1:56,32', '', 't2')
+    .b('0@t1 .3@t1 .36:91,37.5 .5:91,37.5 .55@t2 1@t2')
+    .text(50, 60, [[0, 'Pick a corner, hit the cone', '#FFC300'], [.4, 'Cone = 3 points, goal = 1'], [.6, 'Next shooter']])
+});
+
+D({ id: 'wave3v2', name: 'Fast Break Waves', role: 's g', focus: ['teamwork', 'shooting', 'passing'], int: 3, dur: [8, 15], min: 6, max: 12, ball: 1, cones: [6, 0], bibs: 'team',
+  setup: ['A goal with a keeper. Two defenders start in front of it.', 'Attackers in threes wait at the halfway line with a ball. Spare balls with the coach.'],
+  how: 'Coach plays a ball to the first three attackers, who attack 3v2 and try to score. When the ball goes dead the next three go. Defenders change after 4 waves.',
+  pts: ['Attack fast: the defenders are outnumbered now, not later', 'Spread wide so one defender can\'t mark two', 'Pass when a defender comes to you'],
+  easy: '3v1.', hard: '3v3, or a 6-second limit to shoot.',
+  walk: ['Two defenders in front of the goal. Attackers wait in threes at halfway.', 'The coach plays a ball to the first three.', 'They attack 3v2 and shoot as quickly as they can.', 'When the ball goes dead, the next three go.'],
+  anim: () => A(9).goal(92, 32, 'R', 12).line(30, 8, 30, 56)
+    .p('k', '0:90,32 .4:90,30 .58:90,36 .7:90,32', 'GK', 'gk').face(-1, 0, true)
+    .p('b', '0:70,24 .3:62,26 .5:72,30 .7:70,24', '', 'd1').face(-1, 0)
+    .p('b', '0:70,40 .3:66,40 .55:78,42 .7:70,40', '', 'd2').face(-1, 0)
+    .p('r', '0:26,32 .06:26,32 .3:54,34 .4:58,34 .55:64,34 .7:66,34 .8:30,60 .98:26,32', '', 'a1')
+    .p('r', '0:26,18 .06:26,18 .36:68,14 .5:78,22 .6:80,24 .7:80,24 .8:40,60 .98:26,18', '', 'a2')
+    .p('r', '0:26,46 .06:26,46 .36:68,50 .55:78,44 .7:78,44 .8:50,60 .98:26,46', '', 'a3')
+    .b('0:36,32 .04:36,32 .08@a1 .3@a1 .36@a2 .48@a2 .54@a3 .6@a3 .64:91,36 .8:91,36 .82:36,32')
+    .text(50, 60, [[0, 'Coach plays it in: go!', '#8CFF7A'], [.3, 'Wide and fast, 3 against 2', '#FFC300'], [.6, 'Shoot! Next three ready']])
+});
+
+D({ id: 'coach1v1', name: "1v1 from the Coach's Pass", role: 's', focus: ['1v1', 'defending', 'shooting'], int: 3, dur: [6, 12], min: 4, max: 10, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['A goal with a keeper, or a cone goal. Two lines either side of the coach about 15 big steps out: attackers one side, defenders the other.', 'Coach has the balls.'],
+  how: 'Coach passes to the first attacker. As soon as the ball moves, the first defender runs out. The attacker tries to score; the defender tries to win it and dribble over the halfway line. Then the next pair.',
+  pts: ['Attacker: first touch forward, go at the defender', 'Defender: get close quickly, then slow down and stay on your toes', 'Attacker: change direction, then burst'],
+  easy: 'Defender starts further away.', hard: 'Defender starts closer; or coach plays a bouncing ball.',
+  walk: ['Attackers line up on one side of the coach, defenders on the other.', 'The coach passes to the first attacker.', 'The first defender runs out as the ball moves.', 'Attacker tries to score, defender tries to win it. Then the next two.'],
+  anim: () => A(8).goal(92, 32, 'R', 12)
+    .p('k', '0:90,32 .36:90,28 .5:90,36 .7:90,32', 'GK', 'gk').face(-1, 0, true)
+    .p('k', '0:20,32', 'C', 'coach').face(1, 0, true)
+    .p('r', '0:24,22 .08:24,22 .2:40,26 .3:52,30 .38:60,22 .46:72,26 .52:74,26 .7:40,58 .98:24,22', '', 'att')
+    .p('b', '0:24,42 .08:24,42 .22:58,36 .3:60,34 .38:64,30 .46:68,24 .54:70,24 .7:50,58 .98:24,42', '', 'def')
+    .b('0@coach .08@coach .14@att .46@att .5:91,36 .7:91,36 .72@coach')
+    .text(50, 60, [[0, 'Coach passes: attacker and defender go', '#8CFF7A'], [.3, 'Beat the defender and shoot', '#FFC300'], [.7, 'Next pair']])
+});
+
+D({ id: 'kingring', name: 'King of the Ring', role: 's', focus: ['1v1', 'possession', 'turning'], int: 3, dur: [6, 10], min: 4, max: 10, ball: 'half', cones: [8, 0],
+  setup: ['Mark circles (or squares) about 8 big steps across, one per pair.', 'One ball per pair.'],
+  how: 'One player keeps the ball in the ring for 10 seconds while the other tries to win it. Use turns and shield it with your body. Then swap. Point for every full 10 seconds.',
+  pts: ['Body between the defender and the ball', 'Use the sole to roll it away from them', 'Keep moving: turn, turn, turn'],
+  easy: 'Defender walks; 5 seconds.', hard: 'Smaller ring; 15 seconds; defender can tackle fully.',
+  walk: ['Pairs in a ring, one ball.', 'One player keeps the ball away from the other for 10 seconds.', 'Shield it with your body and turn away from them.', 'Swap roles. A point for every full 10 seconds.'],
+  anim: () => A(8).cones('50,14 64,20 70,32 64,44 50,50 36,44 30,32 36,20', 'y')
+    .p('r', '0:48,30 .15:54,36 .3:44,38 .45:46,26 .6:56,24 .75:58,36 .9:48,30', '', 'kp')
+    .p('b', '0:58,34 .15:48,42 .3:38,32 .45:52,20 .6:62,30 .75:52,42 .9:58,34', '', 'dd')
+    .b('0@kp 1@kp')
+    .text(50, 60, [[0, 'Keep the ball for 10 seconds: shield and turn', '#FFC300']])
+});
+
+D({ id: 'targetplayer', name: 'Target Player Game', role: 'g s', focus: ['possession', 'passing', 'teamwork'], int: 3, dur: [8, 20], min: 6, max: 12, ball: 1, cones: [6, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 15 big steps.', 'Two teams. Each team has a target player standing on the end line they attack.'],
+  how: 'Score by passing to your target player, who must control it. Then the target player passes it back in and you attack the other way. Swap target players every 2 minutes.',
+  pts: ['Look for the target early', 'Pass and move to get it back', 'Target player: move along your line to make a passing lane'],
+  easy: 'Target player can move onto the pitch.', hard: 'Target player must control with one touch; 3 passes before you can score.',
+  walk: ['Two teams. Each team has a target player on the end line they attack.', 'Pass the ball to your target player to score.', 'The target player passes it back in and play continues.', 'Swap target players every couple of minutes.'],
+  anim: () => A(9).area(12, 10, 76, 44).line(50, 10, 50, 54)
+    .p('r', '0:86,24 .4:86,38 .7:86,30', 'T', 'tr').face(-1, 0, true).p('b', '0:14,38 .5:14,26 .9:14,36', 'T', 'tb').face(1, 0, true)
+    .match({ area: [16, 10, 68, 44], n: 3, tA: [.98, .55], tB: [.02, .4], finish: 'dribble' })
+    .text(50, 60, [[0, 'Score by passing to your target player', '#FFC300']])
+});
+
+D({ id: 'numbersgame', name: 'Numbers Game', role: 'g s', focus: ['1v1', 'teamwork', 'speed'], int: 3, dur: [8, 15], min: 6, max: 14, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['Mark a pitch about 20 × 15 big steps with a goal at each end.', 'Two teams line up beside their own goal, numbered 1 to 5. Coach stands at the side with the balls.'],
+  how: 'Coach shouts a number and plays a ball in. That many from each team run on and play until a goal or the ball goes out. Then back to the lines. Shout "1" for 1v1, "3" for 3v3, and so on.',
+  pts: ['Sprint on: first to the ball attacks', 'Outnumbered? Delay and protect the goal', 'Pass early when you have the extra player'],
+  easy: 'Only 1v1 and 2v2.', hard: 'Different numbers for each team, e.g. "3 reds, 2 blues".',
+  walk: ['Two teams line up beside their own goals, each boy with a number.', 'The coach shouts a number and plays a ball in.', 'That many from each team run on and play.', 'Goal or ball out: everyone back to the lines, coach shouts again.'],
+  anim: () => A(9).area(14, 10, 72, 44).goal(14, 32, 'L', 10).goal(86, 32, 'R', 10)
+    .p('k', '0:50,5', 'C', 'co').face(0, 1, true)
+    .p('r', '0:22,5 .1:22,5 .26:36,30 .42:52,34 .5:52,34 .7:22,5', '', 'q1')
+    .p('r', '0:28,5 .1:28,5 .3:34,42 .46:48,44 .54:52,44 .7:28,5', '', 'q2')
+    .p('b', '0:78,5 .1:78,5 .26:62,30 .44:50,32 .54:46,32 .7:78,5', '', 'w1')
+    .p('b', '0:72,5 .1:72,5 .3:64,42 .46:56,42 .54:56,42 .7:72,5', '', 'w2')
+    .p('r', '0:16,5', '', 'q3').p('r', '0:10,5', '', 'q4').p('b', '0:84,5', '', 'w3').p('b', '0:90,5', '', 'w4')
+    .b('0@co .1@co .14:48,22 .26@q1 .42@q1 .46@q2 .54@q2 .58:86,36 .7:86,36 .72@co')
+    .text(50, 60, [[0, 'Coach shouts "2!" and plays the ball in', '#8CFF7A'], [.26, '2v2: play until a goal', '#FFC300'], [.58, 'Goal! Back to the lines']])
+});
+
+D({ id: 'goalzone', name: 'Score Zone Game', role: 'g s', focus: ['dribbling', 'shooting', 'teamwork'], int: 3, dur: [8, 20], min: 4, max: 10, ball: 1, cones: [8, 0], bibs: 'team',
+  setup: ['Mark a pitch about 25 × 15 big steps with a small goal at each end.', 'Mark a zone in front of each goal, about 5 big steps deep.'],
+  how: 'A normal game, but you can only score from inside the zone. So you must dribble or pass into the zone before you shoot. Defenders can go in too.',
+  pts: ['Carry the ball into the zone when there is space', 'Pass to a player already in the zone', 'Shoot quickly once you are in'],
+  easy: 'Bigger zones.', hard: 'Only dribbling into the zone counts, no passes in.',
+  walk: ['A small pitch with a zone marked in front of each goal.', 'Play a normal game.', 'You can only shoot from inside the zone.', 'Dribble or pass into the zone, then shoot.'],
+  anim: () => A(9).area(8, 8, 84, 48).goal(8, 32, 'L', 10).goal(92, 32, 'R', 10).zone(8, 8, 14, 48, 'rgba(255,255,255,.14)').zone(78, 8, 14, 48, 'rgba(255,255,255,.14)')
+    .match({ area: [8, 8, 84, 48], n: 3, tA: [.95, .5], tB: [.05, .5], finish: 'shot' })
+    .text(50, 60, [[0, 'Shoot from inside the zone only', '#FFC300']])
+});
+
+D({ id: 'catchw', name: 'Keeper Catch and Throw', role: 's w', focus: ['gk', 'agility', 'firsttouch'], int: 2, dur: [5, 10], min: 2, max: 8, ball: 'half', cones: [0, 0],
+  setup: ['Pairs about 6 big steps apart, one ball.'],
+  how: 'Throw to your partner: high, then low, then to the side. Catch with hands in a W for high balls, scoop with arms for low balls. 10 catches each, then swap.',
+  pts: ['Hands make a W: thumbs together', 'Get your body behind the ball', 'Soft hands: let the ball come to you'],
+  easy: 'Gentle underarm throws.', hard: 'Partner throws to the side so you have to move; bouncing balls.',
+  walk: ['Pairs face each other, one ball.', 'Throw a high ball: partner catches with hands in a W shape.', 'Throw a low ball: partner scoops it with both arms.', 'Throw to the side: partner moves across and catches. Ten each, then swap.'],
+  anim: () => A(7)
+    .p('b', '0:36,32', '', 'g1').face(1, 0, true).p('y', '0:64,32 .35:64,32 .5:64,24 .7:64,24 .85:64,32', 'GK', 'g2').face(-1, 0, true)
+    .b('0@g1 .1@g1 .25:62,30^ .3@g2 .4@g2 .55:38,34^ .6@g1 .7@g1 .85:62,24^ .9@g2')
+    .text(50, 58, [[0, 'High: hands in a W', '#FFC300'], [.4, 'Low: scoop it'], [.7, 'Side: move your feet first']])
+});
+
+D({ id: 'keepernest', name: "Keeper's Nest", role: 's', focus: ['gk', 'shooting', 'speed'], int: 3, dur: [6, 10], min: 3, max: 8, ball: 'half', cones: [4, 0],
+  setup: ['A goal with a keeper. Three shooters stand in an arc about 8 big steps out, each with a ball.'],
+  how: 'Shooters take turns in order: 1, 2, 3, 1, 2... The keeper saves, drops the ball out of the way, and sets again for the next shot straight away. After 6 shots, a new keeper.',
+  pts: ['Set position before every shot: knees bent, hands ready', 'Move your feet to get behind the ball', 'Shooters: keep it low and give the keeper a chance'],
+  easy: 'Shooters wait for the keeper to say "Ready".', hard: 'Shooters go as soon as the previous shot is saved.',
+  walk: ['Three shooters in an arc in front of the goal, each with a ball.', 'Shooter 1 shoots. The keeper saves and gets set again.', 'Shooter 2, then shooter 3, in order.', 'After six shots, a new keeper.'],
+  anim: () => A(8).goal(92, 32, 'R', 14)
+    .p('k', '0:88,32 .18:88,26 .3:88,32 .5:88,38 .62:88,32 .82:88,30 .95:88,32', 'GK', 'gk').face(-1, 0, true)
+    .p('r', '0:62,18', '1', 's1').face(1, .5, true).p('r', '0:56,32', '2', 's2').face(1, 0, true).p('r', '0:62,46', '3', 's3').face(1, -.5, true)
+    .b('0@s1 .1@s1 .16:88,26 .2:84,20 .3:84,20 .34@s1', 0).b('0@s2 .42@s2 .48:88,38 .52:84,44 .62:84,44 .66@s2').b('0@s3 .74@s3 .8:88,30 .84:84,24 .95:84,24 .98@s3')
+    .text(50, 60, [[0, 'Shooter 1', '#FFC300'], [.34, 'Keeper set? Shooter 2', '#FFC300'], [.66, 'Shooter 3', '#FFC300']])
+});
+
+D({ id: 'laddershoot', name: 'Quick Feet and Shoot', role: 's', focus: ['agility', 'shooting', 'speed'], int: 3, dur: [6, 10], min: 3, max: 8, ball: 1, cones: [8, 0],
+  setup: ['A goal with a keeper or coach. Lay a ladder (or 6 cones in a line, 1 big step apart) about 15 big steps from goal.', 'Coach with the balls beside the goal. Players queue at the ladder.'],
+  how: 'Quick feet through the ladder (two feet in every gap), then the coach passes a ball across. Shoot first time or after one touch. Collect your ball and jog back.',
+  pts: ['On your toes, small fast steps', 'Eyes up at the end of the ladder for the pass', 'Settle your feet before the shot'],
+  easy: 'One foot in each gap; stop the pass first.', hard: 'Sideways through the ladder; first-time shot only.',
+  walk: ['A ladder of cones points towards the goal. The coach has the balls.', 'Quick feet through the ladder: both feet in every gap.', 'At the end, the coach passes a ball across to you.', 'Shoot first time. Collect your ball and jog back.'],
+  anim: () => A(8).goal(92, 32, 'R', 12).cones('22,30 26,30 30,30 34,30 38,30 42,30', 'y').cones('22,34 26,34 30,34 34,34 38,34 42,34', 'y')
+    .p('k', '0:90,32 .44:90,36 .6:90,28 .7:90,32', 'GK', 'gk').face(-1, 0, true)
+    .p('k', '0:70,52', 'C', 'co').face(0, -1, true)
+    .p('r', '0:18,32 .08:18,32 .14:24,32 .2:30,32 .26:36,32 .32:42,32 .38:48,32 .44:58,34 .5:62,34 .54:64,34 .72:40,58 .96:18,32', '', 'r1')
+    .b('0@co .34@co .4:60,36 .46@r1 .54@r1 .58:91,30 .72:91,30 .74@co')
+    .text(50, 60, [[0, 'Quick feet through the ladder', '#FFC300'], [.34, 'Coach passes: shoot!', '#8CFF7A'], [.7, 'Collect and jog back']])
+});
+
+D({ id: 'colourgates', name: 'Colour Gate Sprint', role: 'w s', focus: ['speed', 'agility', 'dribbling'], int: 3, dur: [5, 10], min: 4, max: 12, cones: [8, 0],
+  setup: ['Make 3 gates in a row, each a different colour, about 8 big steps from a start line.', 'Players stand on the line, with or without a ball.'],
+  how: 'Coach shouts a colour. Sprint (or dribble) through that gate and jog back. Add a trick: coach shouts one colour and points at another. Go with the SHOUT.',
+  pts: ['React fast: first step is the big one', 'Dribbling? Big touch, then chase it', 'Slow down through the gate, not before it'],
+  easy: 'No ball, two gates.', hard: 'Pairs race; "opposite" rule: go to any gate EXCEPT the one called.',
+  walk: ['Three coloured gates in a row. Everyone on the start line.', 'The coach shouts a colour.', 'Sprint or dribble through that gate.', 'Jog back to the line and get ready for the next colour.'],
+  anim: () => A(7).line(16, 10, 16, 54).gate(70, 18, true, 6, 'r').gate(70, 32, true, 6, 'y').gate(70, 46, true, 6, 'b')
+    .p('r', '0:18,26 .12:18,26 .3:74,20 .36:74,20 .58:18,26 .62:18,26 .8:74,44 .86:74,44 1:18,26', '', 'g1')
+    .p('b', '0:18,38 .12:18,38 .3:74,22 .36:74,22 .58:18,38 .62:18,38 .8:74,46 .86:74,46 1:18,38', '', 'g2')
+    .b('0@g1 1@g1').b('0@g2 1@g2')
+    .text(50, 60, [[0, '"RED!"', '#FF6B6B'], [.36, 'Jog back'], [.62, '"BLUE!"', '#4CC9F0'], [.86, 'Jog back']])
+});
+
+D({ id: 'crabfootball', name: 'Crab Football', role: 'w g', focus: ['agility', 'teamwork', 'bothfeet'], int: 2, dur: [6, 15], min: 4, max: 12, ball: 1, cones: [4, 0], bibs: 'team',
+  setup: ['Mark a small pitch about 15 × 10 big steps with a cone goal at each end.', 'Two teams. Everyone on hands and feet, tummy up (crab walk).'],
+  how: 'A game played as crabs: hands and feet on the ground, bottom off the ground. Kick with your feet. Goals count as normal. Great for a laugh and strong tummies.',
+  pts: ['Bottom up off the grass', 'Use both feet to kick', 'Shuffle sideways to get there'],
+  easy: 'Allow sitting down to kick.', hard: 'Score only with a header... just kidding. Two balls.',
+  walk: ['A small pitch, two teams.', 'Everyone sits, then lifts their bottom off the ground on hands and feet.', 'Crab-walk and kick the ball with your feet.', 'Score in the cone goals. Normal rules otherwise.'],
+  anim: () => A(10).area(14, 10, 72, 44).goal(14, 32, 'L', 9).goal(86, 32, 'R', 9)
+    .match({ area: [14, 10, 72, 44], n: 3, finish: 'shot' })
+    .text(50, 60, [[0, 'Hands and feet on the ground, bottoms up!', '#FFC300']])
+});
+
+D({ id: 'bodyzones', name: 'Receive on the Move', role: 's', focus: ['firsttouch', 'passing', 'running'], int: 2, dur: [6, 10], min: 3, max: 8, ball: 1, cones: [6, 0],
+  setup: ['Mark a lane about 15 big steps long with a gate at the far end.', 'A server at the start with the balls. Players queue beside the server.'],
+  how: 'Run down the lane. The server passes ahead of you. Take your first touch forward WITHOUT stopping, dribble through the gate, then jog back with your ball.',
+  pts: ['Run before the pass, not after it', 'Meet the ball: touch it forward with the inside of the foot', 'Don\'t stop: one touch, keep running'],
+  easy: 'Walk; stop the ball first.', hard: 'Server throws a bouncing ball; outside of the foot touch.',
+  walk: ['A lane with a gate at the end. The server has the balls.', 'Run down the lane.', 'The server passes ahead of you. Take one touch forward and keep running.', 'Dribble through the gate, then jog back with your ball.'],
+  anim: () => A(7).gate(82, 32, true, 8).line(20, 22, 82, 22).line(20, 42, 82, 42)
+    .p('b', '0:16,32', 'S', 'srv').face(1, 0, true)
+    .p('r', '0:20,26 .06:20,26 .3:48,30 .5:80,32 .56:84,32 .8:40,50 .98:20,26', '', 'rn')
+    .b('0@srv .14@srv .2:44,30 .28@rn .56@rn .6:88,34 .8:88,34 .82@srv')
+    .text(50, 60, [[0, 'Run! Server passes ahead of you', '#FFC300'], [.28, 'One touch forward, keep running', '#8CFF7A'], [.6, 'Through the gate, jog back']])
+});
+
 /* =========================================================
    3. FAVOURITES (saved on this phone with localStorage)
    ========================================================= */
@@ -2339,14 +2757,13 @@ function cardEl(d, sl, i) {
     </div>
     <div class="tags">${d.focus.map(f => `<span class="${focusSel.includes(f) ? 'hit' : ''}">${esc(FOCUS_LABEL[f])}</span>`).join('')}</div>
     <figure class="anim" role="img" aria-label="Animation of ${esc(d.name)}"><svg xmlns="http://www.w3.org/2000/svg"></svg><button class="playbtn"></button></figure>
-    <div class="sect"><h4>Set-up</h4><ol>${setupLines(d, sl, nd).map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
-    <div class="sect"><h4>How it works</h4><p>${esc(d.how)}</p></div>
     <button class="explain" aria-expanded="false">Not clear? Talk me through it</button>
     <div class="walk" hidden>
-      <h4>Step by step</h4>
-      <ol>${d.walk.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-      <p class="slow">The animation above is now playing at half speed.</p>
+      <div class="stepbar"><button class="sprev" aria-label="Previous step">‹</button><div class="stepinfo"><b></b><span></span></div><button class="snext" aria-label="Next step">›</button></div>
+      <ol class="steplist">${d.walk.map(s => `<li>${esc(s)}</li>`).join('')}</ol>
     </div>
+    <div class="sect"><h4>Set-up</h4><ol>${setupLines(d, sl, nd).map(s => `<li>${esc(s)}</li>`).join('')}</ol></div>
+    <div class="sect"><h4>How it works</h4><p>${esc(d.how)}</p></div>
     <div class="sect"><h4>Coaching points</h4><ul>${d.pts.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>
     <div class="tweak"><div><b>Make it easier</b>${esc(d.easy)}</div><div><b>Make it harder</b>${esc(d.hard)}</div></div>
     ${sl ? `<button class="swap">${SWAP} Swap drill</button>` : ''}`;
@@ -2354,18 +2771,46 @@ function cardEl(d, sl, i) {
   const fig = el.querySelector('.anim');
   attachAnim(fig, d);
   const ex = el.querySelector('.explain'), walk = el.querySelector('.walk');
+  /* step mode: the animation plays one phase on repeat, slowly, with that step's words on the pitch */
+  const steps = walkSteps(fig._anim && fig._anim.an, d.walk);
+  const info = walk.querySelector('.stepinfo'), items = [...walk.querySelectorAll('.steplist li')];
+  let cur = 0;
+  const showStep = n => {
+    cur = (n + steps.length) % steps.length;
+    const s = steps[cur], st = fig._anim;
+    info.querySelector('b').textContent = `Step ${cur + 1} of ${steps.length}`;
+    info.querySelector('span').textContent = s.text;
+    items.forEach((li, i) => li.classList.toggle('on', i === cur));
+    if (st) { st.loop = [s.t0, s.t1]; st.t = s.t0; st.speed = .6; st.playing = true; st.last = 0; fig.querySelector('.playbtn').innerHTML = ICON_PAUSE; }
+    let cap = fig.querySelector('.cap'); if (!cap) { cap = document.createElement('div'); cap.className = 'cap'; fig.appendChild(cap); }
+    cap.textContent = `${cur + 1}. ${s.text}`;
+  };
+  walk.querySelector('.sprev').onclick = () => showStep(cur - 1);
+  walk.querySelector('.snext').onclick = () => showStep(cur + 1);
   ex.onclick = () => {
     const open = walk.hidden;
     walk.hidden = !open;
     ex.setAttribute('aria-expanded', open);
-    ex.textContent = open ? 'Hide the step-by-step' : 'Not clear? Talk me through it';
+    ex.textContent = open ? 'Back to the normal animation' : 'Not clear? Talk me through it';
     const st = fig._anim;
-    if (st) { st.speed = open ? .5 : 1; if (open) { st.t = 0; st.playing = true; st.last = 0; fig.querySelector('.playbtn').innerHTML = ICON_PAUSE; } }
-    if (open) fig.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' });
+    fig.classList.toggle('stepping', open);
+    if (open) { showStep(0); fig.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'start' }); }
+    else { const cap = fig.querySelector('.cap'); if (cap) cap.remove(); if (st) { st.loop = null; st.speed = 1; } }
   };
   el.querySelector('.star').onclick = () => toggleFav(d.id);
   if (sl) el.querySelector('.swap').onclick = () => swapSlot(i);
   return el;
+}
+
+/* Phases for step mode. If the animation has timed captions, each caption is a phase;
+   otherwise the written steps are spread evenly over the loop. */
+function walkSteps(an, walk) {
+  const cap = an && an.ts.length ? an.ts[0].steps : null;
+  if (cap && cap.length >= 2) {
+    return cap.map((s, i) => ({ text: s[1], t0: s[0], t1: i + 1 < cap.length ? cap[i + 1][0] : 1 }));
+  }
+  const n = walk.length;
+  return walk.map((text, i) => ({ text, t0: i / n, t1: (i + 1) / n }));
 }
 
 function renderPlan() {
